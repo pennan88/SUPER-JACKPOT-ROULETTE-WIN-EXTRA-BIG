@@ -361,7 +361,6 @@ export function createBlackjack({ sound, toast, getBalance, adjust, onOpen, onCl
     $('.bj-bal').textContent = money(getBalance());
     const inPlay = hands.reduce((a, h) => a + h.bet, 0);
     $('.bj-bet').textContent = phase === 'bet' ? `${money(bet)}${nHands > 1 ? ` ×${nHands}` : ''}` : money(inPlay);
-    $('.bj-back').disabled = phase !== 'bet';
     const acts = $('.bj-actions');
     $('.bj-chips').hidden = phase !== 'bet';
     $('.bj-extras').hidden = phase !== 'bet';
@@ -1037,7 +1036,6 @@ export function createBlackjack({ sound, toast, getBalance, adjust, onOpen, onCl
   function onClick(e) {
     const t = e.target.closest('button');
     if (!t || !el) return;
-    if (t.classList.contains('bj-back')) return close();
     if (t.dataset.drink) {
       const v = visitors.find((x) => x.kind === 'waiter');
       if (!v) return;
@@ -1137,7 +1135,6 @@ export function createBlackjack({ sound, toast, getBalance, adjust, onOpen, onCl
     el.className = `bj${T === TABLES.highlimit ? ' high-limit' : ''}`;
     el.innerHTML = `
       <div class="bj-stage"></div>
-      <button type="button" class="to-roulette bj-back">ROULETTE</button>
       <div class="bj-title"><b>🂡 ${T.name}</b><small>${T.sub}</small><span class="bj-heat"></span></div>
       <div class="bj-labels"><div class="bj-bubble dealer"></div></div>
       <div class="bj-banner"></div>
@@ -1204,6 +1201,8 @@ export function createBlackjack({ sound, toast, getBalance, adjust, onOpen, onCl
     close,
     key,
     isOpen: () => !!el,
+    /** mid-hand (or being walked out): you can't leave yet */
+    busy: () => !!el && phase !== 'bet',
     refresh: render,
     /** the phone or settings opened over the table: stop drawing it */
     pause: () => table?.pause(),

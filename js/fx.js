@@ -35,12 +35,14 @@ let particles = [];
 let emitters = [];
 let running = false;
 let last = 0;
+let dpr = 1;
+// a jackpot throws thousands; past this many on screen, new ones are skipped (nobody can tell)
+const MAX_PARTICLES = 1100;
 
 function sizeCanvas() {
-  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  dpr = Math.min(window.devicePixelRatio || 1, 2);
   canvas.width = innerWidth * dpr;
   canvas.height = innerHeight * dpr;
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 }
 addEventListener('resize', sizeCanvas);
 
@@ -48,6 +50,7 @@ const CONFETTI = ['#ffd84d', '#ff4d6d', '#4dd2ff', '#7dff6a', '#c77dff', '#fffff
 const rand = (a, b) => a + Math.random() * (b - a);
 
 function spawn(x, y, angle, speed, coin) {
+  if (particles.length >= MAX_PARTICLES) return;
   particles.push({
     x, y,
     vx: Math.cos(angle) * speed,
@@ -70,47 +73,61 @@ function burst(x, y, count, power) {
   }
 }
 
-function drawCoin(p) {
-  const r = p.size;
-  ctx.scale(Math.max(0.08, Math.abs(Math.cos(p.flip))), 1);
-  const g = ctx.createLinearGradient(-r, -r, r, r);
-  g.addColorStop(0, '#fff6c2');
-  g.addColorStop(0.45, '#f2c14e');
-  g.addColorStop(1, '#a8701a');
-  ctx.fillStyle = g;
-  ctx.beginPath();
-  ctx.arc(0, 0, r, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.lineWidth = 2;
-  ctx.strokeStyle = '#7a4c0c';
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.arc(0, 0, r * 0.62, 0, Math.PI * 2);
-  ctx.strokeStyle = 'rgba(122,76,12,0.6)';
-  ctx.stroke();
-  ctx.fillStyle = '#7a4c0c';
-  ctx.font = `bold ${r}px Georgia, serif`;
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText('$', 0, 1);
-}
+// the coin is painted once into a sprite, then stamped (gradients + text per coin per frame was the lag)
+const COIN_R = 36; // big enough for the largest coin at 2× pixel ratio
+const COIN_PAD = 3;
+const COIN_HALF = (COIN_R + COIN_PAD) / COIN_R; // sprite half-width per unit of coin radius
+const coinSprite = (() => {
+  const c = document.createElement('canvas');
+  c.width = c.height = 2 * (COIN_R + COIN_PAD);
+  const g = c.getContext('2d');
+  const r = COIN_R;
+  g.translate(r + COIN_PAD, r + COIN_PAD);
+  const grd = g.createLinearGradient(-r, -r, r, r);
+  grd.addColorStop(0, '#fff6c2');
+  grd.addColorStop(0.45, '#f2c14e');
+  grd.addColorStop(1, '#a8701a');
+  g.fillStyle = grd;
+  g.beginPath();
+  g.arc(0, 0, r, 0, Math.PI * 2);
+  g.fill();
+  g.lineWidth = 4;
+  g.strokeStyle = '#7a4c0c';
+  g.stroke();
+  g.beginPath();
+  g.arc(0, 0, r * 0.62, 0, Math.PI * 2);
+  g.strokeStyle = 'rgba(122,76,12,0.6)';
+  g.stroke();
+  g.fillStyle = '#7a4c0c';
+  g.font = `bold ${r}px Georgia, serif`;
+  g.textAlign = 'center';
+  g.textBaseline = 'middle';
+  g.fillText('$', 0, 2);
+  return c;
+})();
 
 function tick(now) {
   const dt = Math.min((now - last) / 1000, 0.04);
   last = now;
-  ctx.clearRect(0, 0, innerWidth, innerHeight);
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  emitters = emitters.filter((e) => {
+  for (let i = emitters.length - 1; i >= 0; i--) {
+    const e = emitters[i];
     e.t += dt;
     e.acc += dt * e.rate;
     while (e.acc >= 1) {
       e.acc -= 1;
       e.emit();
     }
-    return e.t < e.duration;
-  });
+    if (e.t >= e.duration) emitters.splice(i, 1);
+  }
 
-  particles = particles.filter((p) => {
+  // update + draw, compacting the survivors in place (no new array every frame)
+  const bottom = innerHeight + 40;
+  let n = 0;
+  for (let i = 0; i < particles.length; i++) {
+    const p = particles[i];
     p.life -= dt;
     p.vy += 1100 * dt;
     const drag = p.coin ? 0.992 : 0.975;
@@ -121,22 +138,27 @@ function tick(now) {
     p.y += p.vy * dt;
     p.rot += p.vr * dt;
     p.flip += p.vf * dt;
-    if (p.life <= 0 || p.y > innerHeight + 40) return false;
+    if (p.life <= 0 || p.y > bottom) continue;
+    particles[n++] = p;
 
-    ctx.save();
     ctx.globalAlpha = Math.min(1, p.life / 0.5);
-    ctx.translate(p.x, p.y);
-    ctx.rotate(p.rot);
+    const cos = Math.cos(p.rot) * dpr;
+    const sin = Math.sin(p.rot) * dpr;
     if (p.coin) {
-      drawCoin(p);
+      // rotate, then squash sideways as it flips
+      const k = Math.max(0.08, Math.abs(Math.cos(p.flip)));
+      ctx.setTransform(cos * k, sin * k, -sin, cos, p.x * dpr, p.y * dpr);
+      const h = p.size * COIN_HALF;
+      ctx.drawImage(coinSprite, -h, -h, 2 * h, 2 * h);
     } else {
-      ctx.scale(1, Math.cos(p.flip));
+      const k = Math.cos(p.flip);
+      ctx.setTransform(cos, sin, -sin * k, cos * k, p.x * dpr, p.y * dpr);
       ctx.fillStyle = p.color;
       ctx.fillRect(-p.size / 2, -p.size, p.size, p.size * 2);
     }
-    ctx.restore();
-    return true;
-  });
+  }
+  particles.length = n;
+  ctx.globalAlpha = 1;
 
   if (particles.length || emitters.length) {
     requestAnimationFrame(tick);

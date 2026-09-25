@@ -1,5 +1,6 @@
 // 📱 YOUR PHONE: Messages (Dave, who has feelings), a cab home, food delivery and a selfie
-// camera. The handset is 3D (phone3d.js); this file is the phone's apps.
+// camera. The handset is 3D (phone3d.js); this file is the phone's apps. Other modules plug in
+// their own apps too: the bank, the map, your style, the store, goals, settings, Coming Soon™.
 
 import * as THREE from 'three';
 import { PhoneOverlay, SelfieCam, SCREEN_PX } from './phone3d.js';
@@ -24,6 +25,96 @@ const MAX_PHOTOS = 6;
 
 const moodLabel = (m) => (m >= 40 ? '🥰 loves you' : m >= 10 ? '🙂 in a good mood' : m > -25 ? '😐 normal Dave' : m > -45 ? '😒 annoyed' : '😤 FURIOUS');
 const clock = () => new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+
+/**
+ * Scrolling, done by hand. The screen sits in a 3D transform (CSS3DRenderer), and Chrome's scroll
+ * hit-testing doesn't find the lists inside it: the wheel scrolls the page behind the phone and a
+ * finger drag does nothing. So: the wheel scrolls whatever list is under it, and on touch you drag
+ * the list (with a little momentum). The map, the turntable and sliders handle their own touches.
+ */
+function assistScroll(screen) {
+  const scrollable = (el, axis) => {
+    for (; el && el !== screen; el = el.parentElement) {
+      const s = getComputedStyle(el);
+      if (axis === 'y' && /auto|scroll/.test(s.overflowY) && el.scrollHeight > el.clientHeight + 1) return el;
+      if (axis === 'x' && /auto|scroll/.test(s.overflowX) && el.scrollWidth > el.clientWidth + 1) return el;
+    }
+    return null;
+  };
+
+  screen.addEventListener(
+    'wheel',
+    (e) => {
+      e.preventDefault(); // never the page behind
+      const k = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? screen.clientHeight : 1;
+      let dx = e.deltaX * k;
+      let dy = e.deltaY * k;
+      if (e.shiftKey && !dx) [dx, dy] = [dy, 0];
+      const across = Math.abs(dx) > Math.abs(dy);
+      const el = across ? scrollable(e.target, 'x') : scrollable(e.target, 'y');
+      el?.scrollBy(across ? { left: dx } : { top: dy });
+    },
+    { passive: false }
+  );
+
+  let drag = null;
+  let coast = 0;
+  let dragged = false; // a drag isn't a tap
+  screen.addEventListener('pointerdown', (e) => {
+    cancelAnimationFrame(coast);
+    dragged = false;
+    if (e.pointerType === 'mouse' || e.target.closest('canvas, input[type=range]')) return;
+    // screen pixels per pixel of the phone's screen (it's scaled by the 3D view)
+    const scale = screen.getBoundingClientRect().height / screen.offsetHeight || 1;
+    drag = { id: e.pointerId, x: e.clientX, y: e.clientY, scale, el: null, axis: null, v: 0, t: e.timeStamp, target: e.target };
+  });
+  screen.addEventListener('pointermove', (e) => {
+    if (!drag || e.pointerId !== drag.id) return;
+    const dx = (e.clientX - drag.x) / drag.scale;
+    const dy = (e.clientY - drag.y) / drag.scale;
+    if (!drag.axis) {
+      if (Math.hypot(dx, dy) < 8) return;
+      drag.axis = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
+      drag.el = scrollable(drag.target, drag.axis);
+      dragged = true;
+    }
+    if (!drag.el) return;
+    const d = drag.axis === 'x' ? dx : dy;
+    if (drag.axis === 'x') drag.el.scrollLeft -= d;
+    else drag.el.scrollTop -= d;
+    const dt = Math.max(1, e.timeStamp - drag.t);
+    drag.v = 0.8 * (d / dt) + 0.2 * drag.v; // px per ms, smoothed
+    drag.x = e.clientX;
+    drag.y = e.clientY;
+    drag.t = e.timeStamp;
+  });
+  const release = (e) => {
+    if (!drag || e.pointerId !== drag.id) return;
+    const { el, axis } = drag;
+    let v = drag.v * 16; // px per frame
+    drag = null;
+    if (!el || Math.abs(v) < 0.5) return;
+    const step = () => {
+      if (axis === 'x') el.scrollLeft -= v;
+      else el.scrollTop -= v;
+      v *= 0.94;
+      if (Math.abs(v) > 0.3) coast = requestAnimationFrame(step);
+    };
+    coast = requestAnimationFrame(step);
+  };
+  screen.addEventListener('pointerup', release);
+  screen.addEventListener('pointercancel', release);
+  screen.addEventListener(
+    'click',
+    (e) => {
+      if (!dragged) return;
+      dragged = false;
+      e.stopPropagation();
+      e.preventDefault();
+    },
+    true
+  );
+}
 
 let daveWallpaper = null;
 function renderDaveWallpaper() {
@@ -55,8 +146,15 @@ function renderDaveWallpaper() {
  * @param canOpen       () => bool, nothing else is taking over the screen
  * @param roomVisible   () => bool, the roulette room is showing (the courier walks in there)
  * @param bannersOn     () => bool, show Dave's text banners (a setting)
+ *
+ * Plug-in apps (phone.add(app)):
+ *   { id, label, emoji, icon?() (html for the icon), dot?() (a badge), dock? (sits in the dock),
+ *     html(header), mount?(view) once drawn, unmount?() when you leave,
+ *     update?(view) (redraw in place, for apps with a 3D scene in them),
+ *     click?(button) → true if it was theirs, input?(el), change?(el) }
  */
 export function createPhone({ button, store, sound, toast, booze, dave, hangover, settings, courier, getBalance, spend, pause3d, resume3d, canOpen, roomVisible, bannersOn = () => true }) {
+  const apps = new Map(); // the plug-in apps, by id
   let layer = null;
   let overlay = null;
   let screen = null;
@@ -72,8 +170,9 @@ export function createPhone({ button, store, sound, toast, booze, dave, hangover
   // ---------- the button in the top bar ----------
   const badge = () => {
     const n = dave.unread();
-    button.querySelector('.ph-badge').textContent = n > 9 ? '9+' : n;
-    button.classList.toggle('has-unread', n > 0);
+    const other = [...apps.values()].some((a) => a.dot?.());
+    button.querySelector('.ph-badge').textContent = n ? (n > 9 ? '9+' : n) : other ? '!' : '';
+    button.classList.toggle('has-unread', n > 0 || other);
   };
   badge();
   button.addEventListener('click', () => (layer ? close() : open()));
@@ -100,8 +199,12 @@ export function createPhone({ button, store, sound, toast, booze, dave, hangover
       <div class="ph-status"><span class="ph-time">${clock()}</span><span class="ph-island"></span><span class="ph-icons">📶 🔋</span></div>
       <div class="ph-view"></div>
       <button type="button" class="ph-homebar" aria-label="Home"></button>`;
+    assistScroll(screen);
     screen.addEventListener('click', onClick);
+    screen.addEventListener('input', (e) => apps.get(view)?.input?.(e.target));
+    screen.addEventListener('change', (e) => apps.get(view)?.change?.(e.target));
     layer.querySelector('.ph-dim').addEventListener('click', close);
+    layer.addEventListener('wheel', (e) => e.preventDefault(), { passive: false }); // the page stays put behind the phone
     pause3d();
     overlay = new PhoneOverlay(layer.querySelector('.ph-stage'), screen, { skin: settings.look().phoneSkin });
     overlay.open();
@@ -117,6 +220,7 @@ export function createPhone({ button, store, sound, toast, booze, dave, hangover
     const dying = layer;
     const o = overlay;
     stopCamera();
+    apps.get(view)?.unmount?.();
     layer = null;
     overlay = null;
     screen = null;
@@ -137,13 +241,14 @@ export function createPhone({ button, store, sound, toast, booze, dave, hangover
       viewing ? ((viewing = null), render()) : view !== 'home' ? show('home') : close();
     }
     if (e.code === 'Space' || e.code === 'Escape') {
-      e.stopPropagation();
-      e.preventDefault();
+      e.stopPropagation(); // not a spin, not the slots
+      if (!/INPUT|TEXTAREA/.test(e.target.tagName) || e.code === 'Escape') e.preventDefault(); // (but typing a space works)
     }
   };
 
   function show(app) {
     if (view === 'camera' && app !== 'camera') stopCamera();
+    if (view !== app) apps.get(view)?.unmount?.();
     view = app;
     viewing = null;
     if (app === 'messages') {
@@ -160,12 +265,31 @@ export function createPhone({ button, store, sound, toast, booze, dave, hangover
     if (!screen) return;
     screen.querySelector('.ph-time').textContent = clock();
     const v = screen.querySelector('.ph-view');
+    const ext = apps.get(view);
     v.className = `ph-view v-${view}`;
-    v.innerHTML = { home: homeHtml, messages: messagesHtml, cab: cabHtml, food: foodHtml, camera: cameraHtml }[view]();
+    if (ext) {
+      ext.unmount?.();
+      v.innerHTML = ext.html(header);
+      ext.mount?.(v);
+    } else {
+      v.innerHTML = { home: homeHtml, messages: messagesHtml, cab: cabHtml, food: foodHtml, camera: cameraHtml }[view]();
+    }
     if (view === 'messages') {
       const list = v.querySelector('.msg-list');
       if (list) list.scrollTop = list.scrollHeight;
     }
+  }
+
+  /** Redraw an app if it's on screen, keeping your scroll (an app with a 3D scene redraws itself in place). */
+  function refresh(id) {
+    if (!screen || (id && view !== id && view !== 'home')) return;
+    const v = screen.querySelector('.ph-view');
+    const ext = apps.get(view);
+    if (ext?.update) return ext.update(v);
+    const top = v.querySelector('.ph-scroll')?.scrollTop;
+    render();
+    const now = v.querySelector('.ph-scroll');
+    if (now && top) now.scrollTop = top;
   }
 
   function wallpaperCss() {
@@ -178,17 +302,24 @@ export function createPhone({ button, store, sound, toast, booze, dave, hangover
   function homeHtml() {
     const n = dave.unread();
     const app = (id, emoji, label, extra = '') => `<button type="button" class="ph-app" data-app="${id}"><span class="ph-icon i-${id}">${emoji}${extra}</span><small>${label}</small></button>`;
+    const dot = (d) => (d ? `<b class="ph-dot">${d === true ? '!' : d}</b>` : '');
+    const ext = (a) => app(a.id, a.icon?.() || a.emoji, a.label, dot(a.dot?.()));
+    const all = [...apps.values()];
     return `
       <div class="ph-home" style="background:${wallpaperCss()}">
         <div class="ph-clock">${clock()}</div>
         <div class="ph-date">${new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</div>
         <div class="ph-grid">
-          ${app('messages', '💬', 'Messages', n ? `<b class="ph-dot">${n}</b>` : '')}
+          ${all.filter((a) => !a.dock).map(ext).join('')}
           ${app('cab', '🚕', 'CabCab')}
           ${app('food', '🛵', 'GrubGrab')}
           ${app('camera', '📸', 'Camera')}
         </div>
         <p class="ph-tip">Press <kbd>P</kbd> to put your phone away</p>
+        <div class="ph-dock">
+          ${app('messages', '💬', 'Messages', dot(n))}
+          ${all.filter((a) => a.dock).map(ext).join('')}
+        </div>
       </div>`;
   }
 
@@ -377,6 +508,7 @@ export function createPhone({ button, store, sound, toast, booze, dave, hangover
     if (!t) return;
     if (t.classList.contains('ph-homebar')) return show('home');
     if (t.dataset.app) return show(t.dataset.app);
+    if (apps.get(view)?.click?.(t)) return;
     if (t.dataset.reply) {
       if (typing) return;
       dave.reply(t.dataset.reply, t.dataset.m);
@@ -403,10 +535,7 @@ export function createPhone({ button, store, sound, toast, booze, dave, hangover
       render();
       return startCamera();
     }
-    if (t.dataset.settings != null) {
-      close();
-      setTimeout(() => settings.open('character'), 450);
-    }
+    if (t.dataset.settings != null) show('style');
   }
 
   // ---------- Dave talks to the phone ----------
@@ -437,5 +566,19 @@ export function createPhone({ button, store, sound, toast, booze, dave, hangover
     },
   });
 
-  return { open, close, isOpen: () => !!layer, playTone };
+  return {
+    open,
+    close,
+    isOpen: () => !!layer,
+    playTone,
+    /** plug in an app (see the top of createPhone) */
+    add(app) {
+      apps.set(app.id, app);
+      badge();
+    },
+    refresh,
+    badge,
+    /** which app is on screen (null when the phone is away) */
+    current: () => (layer ? view : null),
+  };
 }

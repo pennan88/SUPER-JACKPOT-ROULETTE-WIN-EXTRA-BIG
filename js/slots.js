@@ -6,9 +6,35 @@
 import { celebrate, confetti } from './fx.js';
 import { emit } from './events.js';
 import { DragonRush3D, SYMBOL_INFO } from './slots3d.js';
-import { BUYS, MULT_MAX, PAYS, SYMS, freeSpinsFor, newGrid, newSpots, playSpin } from './rush-math.js';
+import { BUYS, COOKIE_SPINS, MULT_MAX, PAYS, SYMS, TAX_SPINS, freeSpinsFor, isRegular, newGrid, newSpots, playSpin } from './rush-math.js';
 
 const BETS = [10, 20, 50, 100, 200, 500, 1000, 2000, 5000];
+
+// ✨ what the special markers do (for the paytable)
+const MARKERS = [
+  ['envelope', `Free spins only. Every one left on the board at the end = <b>+1, +2 or +3 FREE SPINS</b>.`],
+  ['cookie', `When the tumbles stop it cracks open: <b>+${COOKIE_SPINS} FREE SPINS</b>, a <b>×2 spot</b>, or a fortune. The fortune is free.`],
+  ['gong', `Base game. On the board at the end = a free <b>RESPIN</b> that keeps your multiplier spots.`],
+  ['firecracker', `When the tumbles stop: <b>BOOM</b>. Clears the 3×3 around it. Nearby firecrackers join in.`],
+  ['egg', `Cracks on the next tumble, <b>hatches</b> on the one after into a ✚ of baby dragon WILDS.`],
+  ['wild', `Counts as <b>any symbol</b>. Only ever comes out of an egg.`],
+  ['kite', `When the tumbles stop it flies off with <b>every copy</b> of the most common symbol.`],
+  ['cat', `Waves on every win: a marked spot goes <b>×2</b>, a lit one <b>doubles</b>. Sometimes it waves at nothing. It's a cat.`],
+  ['moon', `When the tumbles stop it gathers <b>every multiplier</b> on the board into one giant spot.`],
+  ['panda', `Asleep. When the tumbles stop it wakes up grumpy and <b>every spot around it goes up a level</b>.`],
+  ['taxman', `Takes 10% of your spin win and refunds you in <b>FREE SPINS</b> (${TAX_SPINS.base}, or ${TAX_SPINS.free} in the bonus). Receipt included.`],
+];
+const FORTUNES = [
+  'You will spin again.',
+  'Luck is in your future. Not this one.',
+  'Help, I am trapped in a slot machine.',
+  'The dragon sees you. The dragon is unimpressed.',
+  'Error 404: fortune not found.',
+  'Soon you will have less money. Very soon.',
+  'You will meet a tall, dark and handsome loss.',
+  'That was the lucky cookie. Sorry.',
+  'Your lucky numbers are 7, 7 and your bank PIN.',
+];
 // wins are paid in whole dollars (the balance is whole dollars)
 const money = (n) => '$' + Math.round(n).toLocaleString('en-US');
 const load = (k) => {
@@ -40,7 +66,7 @@ export function createSlots({ host, sound, music, getBalance, adjust, toast, onO
       <div class="dr-slot"></div>
       <aside class="dr-right">
         <h2 class="dr-logo" aria-label="Dragon Rush Win Big"><span class="l1">DRAGON</span><span class="l2">RUSH</span><span class="l3">WIN BIG</span></h2>
-        <div class="dr-feature">🐉 CLUSTERS OF <b>5+</b> PAY<br>✨ SPOTS GROW TO <b>×1024</b><br>🔥 3+ PEARLS = <b>FREE SPINS</b></div>
+        <div class="dr-feature">🐉 CLUSTERS OF <b>5+</b> PAY<br>✨ SPOTS GROW TO <b>×1024</b><br>🔥 3+ PEARLS = <b>FREE SPINS</b><br>🧨 10 MARKERS THAT <b>DO STUFF</b></div>
       </aside>
       <footer class="dr-bar">
         <button type="button" class="dr-info" aria-label="Paytable and rules">i</button>
@@ -60,7 +86,6 @@ export function createSlots({ host, sound, music, getBalance, adjust, toast, onO
         </div>
       </footer>
     </div>
-    <button type="button" class="to-roulette">ROULETTE</button>
     <div class="dr-pops"></div>
     <div class="sm-winpop"></div>
     <div class="sm-banner"></div>
@@ -99,6 +124,8 @@ export function createSlots({ host, sound, music, getBalance, adjust, toast, onO
           <li><b>Buy bonus:</b> ${BUYS.map((b) => `${b.name} for ${b.cost}× your bet`).join(', or ')}.</li>
           <li>Simulated return to player ≈ 96%. The money is fake. The dragon is real (in our hearts).</li>
         </ul>
+        <h4 class="dr-pt-h">✨ SPECIAL MARKERS ✨</h4>
+        <ul class="dr-pt-markers"></ul>
       </div>
     </div>`;
   host.appendChild(view);
@@ -118,7 +145,7 @@ export function createSlots({ host, sound, music, getBalance, adjust, toast, onO
   const epicEl = $$('.dr-epic');
 
   const machine = new DragonRush3D($$('.dr-canvas'), { slotEl: $$('.dr-slot'), onLeverDown: () => leverDown(), onLeverUp: () => leverUp() });
-  machine.setGrid(newGrid().map((col) => col.map((s) => (s === 'pearl' ? 'jade' : s))));
+  machine.setGrid(newGrid().map((col) => col.map((s) => (isRegular(s) ? s : 'jade'))));
 
   let betIdx = 1;
   let busy = false;
@@ -158,6 +185,7 @@ export function createSlots({ host, sound, music, getBalance, adjust, toast, onO
         .reverse()
         .map((id) => `<tr><td>${icon(id)}</td>${sizes.map((n) => `<td>${PAYS[id][Math.min(n, 15) - 5]}×</td>`).join('')}</tr>`)
         .join('') + `<tr><td>${icon('pearl')}</td><td colspan="${sizes.length}" class="dr-pt-scatter">3+ anywhere = FREE SPINS</td></tr>`;
+    $$('.dr-pt-markers').innerHTML = MARKERS.map(([id, text]) => `<li>${icon(id)}<div><strong>${SYMBOL_INFO[id].name}</strong>${text}</div></li>`).join('');
   }
 
   function renderDisplay() {
@@ -183,18 +211,22 @@ export function createSlots({ host, sound, music, getBalance, adjust, toast, onO
     $$('.dr-minus').disabled = $$('.dr-plus').disabled = busy || inBonus;
   }
   const setMsg = (t) => (msg.textContent = t);
+  const winEl = $$('.dr-win');
+  let winRaf = 0;
   function setWin(target) {
+    // a tumble chain calls this every step: one count-up at a time, not one per step
+    cancelAnimationFrame(winRaf);
     const from = shownWin;
     shownWin = target;
     if (!target) {
-      $$('.dr-win').textContent = 'WIN $0';
+      winEl.textContent = 'WIN $0';
       return;
     }
     const t0 = performance.now();
     (function count(now) {
       const u = Math.min((now - t0) / 450, 1);
-      $$('.dr-win').textContent = `WIN ${money(from + (target - from) * u)}`;
-      if (u < 1) requestAnimationFrame(count);
+      winEl.textContent = `WIN ${money(from + (target - from) * u)}`;
+      if (u < 1) winRaf = requestAnimationFrame(count);
     })(t0);
   }
 
@@ -388,6 +420,39 @@ export function createSlots({ host, sound, music, getBalance, adjust, toast, onO
     bend(180, 1350, 0.6, 'square', 0.03);
     noise({ dur: 0.6, f0: 400, f1: 8000, vol: 0.3 });
   };
+  // ✨ marker sounds
+  const crunch = () => {
+    noise({ dur: 0.18, f0: 3000, f1: 900, q: 0.8, vol: 0.45 });
+    for (let i = 0; i < 5; i++) sound.blip(300 + Math.random() * 500, 0.03, 'square', 0.05, i * 0.03);
+  };
+  const bang = () => {
+    sound.boom(0.9);
+    noise({ dur: 0.25, f0: 7000, f1: 1500, q: 0.6, vol: 0.55, type: 'highpass' });
+    noise({ dur: 0.6, f0: 1200, f1: 80, vol: 0.4, type: 'lowpass', delay: 0.02 });
+  };
+  const meow = () => {
+    bend(620, 980, 0.12, 'triangle', 0.07);
+    bend(980, 520, 0.3, 'triangle', 0.07, 0.12);
+  };
+  const crackle = () => {
+    noise({ dur: 0.08, f0: 5000, f1: 3000, q: 1.5, vol: 0.5 });
+    sound.blip(1800, 0.03, 'square', 0.05, 0.05);
+  };
+  const kiteSwoosh = () => {
+    noise({ dur: 1.1, f0: 300, f1: 5000, vol: 0.3 });
+    bend(300, 1400, 1, 'sine', 0.06);
+    for (let i = 0; i < 6; i++) sound.blip(700 + i * 160, 0.12, 'triangle', 0.04, 0.3 + i * 0.09);
+  };
+  const shimmer = () => PENTA.forEach((f, i) => bell(f * 2, i * 0.05, 0.05));
+  const grumble = () => {
+    bend(180, 95, 0.45, 'sawtooth', 0.07);
+    noise({ dur: 0.4, f0: 400, f1: 150, vol: 0.2, type: 'lowpass' });
+  };
+  const kaching = () => {
+    [1800, 2700].forEach((f, i) => sound.blip(f, 0.3, 'triangle', 0.08, 0.08 + i * 0.06));
+    noise({ dur: 0.12, f0: 2500, f1: 800, vol: 0.3 });
+    sound.blip(160, 0.1, 'square', 0.08);
+  };
   function footsteps(n, gap) {
     if (sound.muted) return;
     const c = sound.ensure();
@@ -495,6 +560,24 @@ export function createSlots({ host, sound, music, getBalance, adjust, toast, onO
     tally.prepend(li);
     while (tally.children.length > 7) tally.lastChild.remove();
   }
+  function addNote(html) {
+    const li = document.createElement('li');
+    li.className = 'note';
+    li.innerHTML = html;
+    tally.prepend(li);
+    while (tally.children.length > 7) tally.lastChild.remove();
+  }
+  // a little floating caption over a cell (fortunes, CRACK!, +2 SPINS…)
+  function floatNote(at, html, cls = '') {
+    const el = document.createElement('div');
+    el.className = `dr-pop note ${cls}`;
+    el.style.left = `${at.x}px`;
+    el.style.top = `${at.y}px`;
+    el.innerHTML = html;
+    pops.appendChild(el);
+    setTimeout(() => el.remove(), cls.includes('fortune') ? 3400 : 1700);
+  }
+  const noteAt = (c, r, html, cls) => floatNote(machine.screenOf([[c, r]]), html, cls);
 
   // ---------- the spin ----------
   async function spin() {
@@ -520,62 +603,18 @@ export function createSlots({ host, sound, music, getBalance, adjust, toast, onO
     if (!isFree) machine.resetSpots();
     renderDisplay();
 
-    const res = playSpin({ bet, spots: isFree ? fsSpots : newSpots(), free: isFree });
-    whoosh();
-    await machine.dropOut();
-    let pearlsSoFar = 0;
-    await machine.dropIn(res.start, (c) => {
-      land(c);
-      marimba(PENTA[c + (isFree ? 3 : 0)], 0, 0.08);
-      const p = res.start[c].filter((s) => s === 'pearl').length;
-      if (p) {
-        pearlsSoFar += p;
-        bell(880 + pearlsSoFar * 220, 0, 0.14);
-        if (pearlsSoFar >= 2) {
-          machine.kick(0.1);
-          if (c < 6) riser(0.6 / machine.speed);
-        }
-      }
-    }, tick);
-
-    let run = 0;
+    // one paid spin can be several plays: a 🔔 gong on the board gives a respin that keeps the spots
+    const spots = isFree ? fsSpots : newSpots();
+    let win = 0;
+    let res;
     let n = 0;
-    for (const step of res.steps) {
-      n++;
-      for (const cl of step.clusters) cl.at = machine.screenOf(cl.cells);
-      await Promise.all(step.clusters.map((cl) => machine.explode(cl.cells, SYMBOL_INFO[cl.sym].color)));
-      pop(n);
-      shatter(n);
-      step.clusters.forEach((cl) => {
-        floatPop(cl);
-        addTally(cl);
-      });
-      run += step.win;
-      setWin(run);
-      setMsg(n > 1 ? `TUMBLE ×${n}! 💥` : 'WIN!');
-      let top = 0;
-      for (const { c, r, v } of step.spotChanges) {
-        machine.setSpot(c, r, v);
-        top = Math.max(top, v);
-      }
-      if (top >= 2) chime(top);
-      if (top >= MULT_MAX && !joked) {
-        joked = true;
-        setTimeout(absurd, 300);
-      }
-      machine.kick(0.05 + 0.04 * n);
-      if (n === 3) slam(`<small>BOOM!</small>TUMBLE ×3<em>💥 KEEP GOING 💥</em>`, 'combo c2', 1100);
-      if (n === 5) slam(`<small>🔥 YOU ARE ON A ROLL! 🔥</small>TUMBLE ×5`, 'combo c3', 1300);
-      if (n >= 7 && n % 2 === 1) slam(`<small>WHAT IS HAPPENING</small>TUMBLE ×${n}`, 'combo c4', 1300);
-      await machine.wait(260);
-      cascade(n);
-      await machine.tumble(step, (c) => {
-        land(c);
-        marimba(PENTA[Math.min(9, c + n)], 0, 0.06);
-      });
+    for (let respin = false; ; respin = true) {
+      if (respin) await gongRespin();
+      ({ res, n } = await play({ bet, isFree, spots, offset: win }));
+      win += Math.round(res.total);
+      if (freeSpinsFor(res.pearls) || res.extraSpins || !res.respin) break;
     }
 
-    const win = Math.round(res.total);
     if (win) adjust(win);
     if (!isFree) onBet?.(win > bet ? 'win' : win < bet ? 'loss' : 'push', bet, win / bet);
     if (isFree) freeWin += win;
@@ -602,22 +641,232 @@ export function createSlots({ host, sound, music, getBalance, adjust, toast, onO
       womp();
     }
 
-    // 🔥 flaming pearls → free spins
+    // 🔥 flaming pearls → free spins (plus any spins the markers handed out: 🧧 🥠 🧾)
     const fs = freeSpinsFor(res.pearls);
+    const extra = res.extraSpins;
     let introDone = null;
     if (fs) {
       await machine.highlight(machine.cellsOf('pearl'));
       if (!isFree) freeBet = bet;
-      introDone = awardFree(fs, `🔥 ${res.pearls} FLAMING PEARLS 🔥`, isFree);
+      introDone = awardFree(fs + extra, `🔥 ${res.pearls} FLAMING PEARLS 🔥`, isFree);
+    } else if (extra && isFree) {
+      free += extra;
+      slam(`<small>${res.envelopes.length ? '🧧 LUCKY MONEY 🧧' : 'THE DRAGON IS GENEROUS'}</small>+${extra} SPIN${extra > 1 ? 'S' : ''}`, 'free', 1600);
+      sound.cash?.();
+    } else if (extra) {
+      freeBet = bet;
+      introDone = awardFree(extra, res.tax?.spins ? '🧾 YOUR TAX REFUND 🧾' : '🥠 THE COOKIE HAS SPOKEN 🥠');
     }
+    const started = fs || extra;
     busy = false;
-    if (isFree && free === 0 && !fs) setTimeout(endFree, 700);
+    if (isFree && free === 0 && !started) setTimeout(endFree, 700);
     renderDisplay();
 
     if (free > 0 && introDone) introDone.then(() => setTimeout(() => open && !busy && free > 0 && spin(), 500));
     else if (free > 0) setTimeout(() => open && !busy && free > 0 && spin(), leverTurbo ? 400 : 1100);
-    else if (leverHeld && !fs) setTimeout(() => leverHeld && open && !busy && spin(), 250);
-    else if (autoOn && !fs && !inBonus) setTimeout(() => autoOn && open && !busy && !inBonus && spin(), 700);
+    else if (leverHeld && !started) setTimeout(() => leverHeld && open && !busy && spin(), 250);
+    else if (autoOn && !started && !inBonus) setTimeout(() => autoOn && open && !busy && !inBonus && spin(), 700);
+  }
+
+  // ---------- one play: drop the grid, run every step, settle the end-of-spin markers ----------
+  async function play({ bet, isFree, spots, offset }) {
+    const res = playSpin({ bet, spots, free: isFree });
+    whoosh();
+    await machine.dropOut();
+    let pearlsSoFar = 0;
+    await machine.dropIn(res.start, (c) => {
+      land(c);
+      marimba(PENTA[c + (isFree ? 3 : 0)], 0, 0.08);
+      const p = res.start[c].filter((s) => s === 'pearl').length;
+      if (p) {
+        pearlsSoFar += p;
+        bell(880 + pearlsSoFar * 220, 0, 0.14);
+        if (pearlsSoFar >= 2) {
+          machine.kick(0.1);
+          if (c < 6) riser(0.6 / machine.speed);
+        }
+      }
+    }, tick);
+
+    let run = 0;
+    let n = 0;
+    for (const step of res.steps) {
+      if (step.type === 'win') {
+        n++;
+        for (const cl of step.clusters) cl.at = machine.screenOf(cl.cells);
+        await Promise.all(step.clusters.map((cl) => machine.explode(cl.cells, SYMBOL_INFO[cl.sym].color)));
+        pop(n);
+        shatter(n);
+        step.clusters.forEach((cl) => {
+          floatPop(cl);
+          addTally(cl);
+        });
+        run += step.win;
+        setWin(offset + run);
+        setMsg(step.clusters.some((cl) => cl.wild) ? '🐉 WILD WIN!' : n > 1 ? `TUMBLE ×${n}! 💥` : 'WIN!');
+        let top = 0;
+        for (const { c, r, v } of step.spotChanges) {
+          machine.setSpot(c, r, v);
+          top = Math.max(top, v);
+        }
+        if (top >= 2) chime(top);
+        if (top >= MULT_MAX && !joked) {
+          joked = true;
+          setTimeout(absurd, 300);
+        }
+        machine.kick(0.05 + 0.04 * n);
+        if (n === 3) slam(`<small>BOOM!</small>TUMBLE ×3<em>💥 KEEP GOING 💥</em>`, 'combo c2', 1100);
+        if (n === 5) slam(`<small>🔥 YOU ARE ON A ROLL! 🔥</small>TUMBLE ×5`, 'combo c3', 1300);
+        if (n >= 7 && n % 2 === 1) slam(`<small>WHAT IS HAPPENING</small>TUMBLE ×${n}`, 'combo c4', 1300);
+        await cats(step.cats);
+        await machine.wait(260);
+      } else {
+        await marker(step);
+      }
+      cascade(Math.max(1, n));
+      await machine.tumble(step, (c) => {
+        land(c);
+        marimba(PENTA[Math.min(9, c + n)], 0, 0.06);
+      });
+      await eggs(step);
+    }
+    await finale(res, offset);
+    return { res, n };
+  }
+
+  // 🐱 the lucky cats wave after a win
+  async function cats(list = []) {
+    for (const cat of list) {
+      machine.wave(cat.c, cat.r);
+      meow();
+      if (!cat.to) {
+        noteAt(cat.c, cat.r, 'waved at nothing', 'fortune small');
+        continue;
+      }
+      await machine.orb(machine.cellPos(cat.c, cat.r), machine.cellPos(cat.to.c, cat.to.r), '#ffd23f');
+      machine.setSpot(cat.to.c, cat.to.r, cat.to.v);
+      chime(cat.to.v);
+      noteAt(cat.to.c, cat.to.r, `🐾 ×${cat.to.v}`, 'good');
+    }
+  }
+
+  // the markers that act when the tumbles run dry
+  async function marker(step) {
+    if (step.type === 'cookie') {
+      setMsg('🥠 FORTUNE COOKIE!');
+      crunch();
+      await machine.explode(step.at, SYMBOL_INFO.cookie.color);
+      for (const k of step.cookies) {
+        if (k.prize === 'spins') {
+          noteAt(k.c, k.r, `+${k.spins} FREE SPINS`, 'good big');
+          dingding(6);
+        } else if (k.prize === 'spot') {
+          machine.setSpot(k.c, k.r, k.v);
+          chime(k.v);
+          noteAt(k.c, k.r, `×${k.v} SPOT`, 'good');
+        } else {
+          noteAt(k.c, k.r, `“${FORTUNES[(Math.random() * FORTUNES.length) | 0]}”`, 'fortune');
+          womp();
+        }
+      }
+      await machine.wait(step.cookies.some((k) => k.prize === 'dud') ? 1100 : 600);
+    } else if (step.type === 'panda') {
+      setMsg('🐼 THE PANDA WOKE UP. IT IS GRUMPY.');
+      grumble();
+      for (const [c, r] of step.at) noteAt(c, r, '😤', 'big');
+      machine.kick(0.2);
+      await machine.wait(350);
+      let top = 0;
+      for (const [i, s] of step.spotChanges.entries()) {
+        machine.wait(i * 45).then(() => machine.setSpot(s.c, s.r, s.v));
+        top = Math.max(top, s.v);
+      }
+      await machine.wait(step.spotChanges.length * 45 + 250);
+      if (top >= 2) chime(top);
+      await machine.explode(step.at, '#ffffff');
+    } else if (step.type === 'firecracker') {
+      const many = step.chain.length;
+      setMsg(many > 1 ? `🧨 CHAIN REACTION ×${many}!` : '🧨 BOOM!');
+      await machine.blast(step.chain, step.removed, bang);
+      if (many > 1) slam(`<small>🧨 CHAIN REACTION 🧨</small>×${many} BOOM`, 'combo c3', 1200);
+    } else if (step.type === 'kite') {
+      const names = step.kites.filter((k) => k.sym).map((k) => SYMBOL_INFO[k.sym].name);
+      setMsg(names.length ? `🪁 THE KITE STOLE ALL THE ${names.join(' & ')}!` : '🪁 WHEEEE');
+      kiteSwoosh();
+      await machine.kiteAway(step.kites.map((k) => ({ ...k, color: k.sym ? SYMBOL_INFO[k.sym].color : '#ffffff' })));
+    } else if (step.type === 'moon') {
+      setMsg('🌕 FULL MOON!');
+      shimmer();
+      if (step.target) {
+        const to = machine.cellPos(step.target.c, step.target.r);
+        await Promise.all(step.from.map(([c, r], i) => machine.orb(machine.cellPos(c, r), to, '#ffe6a0', i * 60)));
+        for (const s of step.spotChanges) machine.setSpot(s.c, s.r, s.v);
+        chime(step.target.v);
+        slam(`<small>🌕 THE MOON GATHERED IT ALL 🌕</small>×${step.target.v}`, 'combo c2', 1500);
+        await machine.wait(500);
+      } else {
+        for (const [c, r] of step.at) noteAt(c, r, 'the moon just… glows', 'fortune small');
+        await machine.wait(400);
+      }
+      await machine.explode(step.at, '#ffe6a0');
+    }
+  }
+
+  // 🥚 after every refill: eggs crack, cracked eggs hatch into wilds
+  async function eggs(step) {
+    for (const e of step.eggs) {
+      machine.crack(e.c, e.r);
+      crackle();
+      noteAt(e.c, e.r, 'CRACK!', 'good');
+    }
+    if (step.eggs.length) await machine.wait(350);
+    for (const h of step.hatch) {
+      crackle();
+      roar();
+      setMsg('🐣 THE EGG HATCHED!');
+      slam(`<small>🐣 THE EGG HATCHED 🐣</small>WILDS!`, 'free', 1400);
+      await machine.hatch(h);
+      await machine.wait(250);
+    }
+  }
+
+  // the end of a play: 🧧 envelopes pop open, 🧾 the tax man takes his cut
+  async function finale(res, offset) {
+    if (res.envelopes.length) {
+      setMsg('🧧 RED ENVELOPES!');
+      for (const e of res.envelopes) {
+        noteAt(e.c, e.r, `+${e.spins} SPIN${e.spins > 1 ? 'S' : ''}`, 'good big');
+        bell(1320 + e.spins * 220, 0, 0.12);
+      }
+      await machine.explode(res.envelopes.map((e) => [e.c, e.r]), SYMBOL_INFO.envelope.color);
+    }
+    const tax = res.tax;
+    if (tax) {
+      await machine.highlight(tax.cells, '#5ee08f');
+      if (tax.amount) {
+        kaching();
+        setWin(offset + res.total);
+        setMsg(`🧾 TAXED ${money(tax.amount)}. REFUND: ${tax.spins} FREE SPIN${tax.spins > 1 ? 'S' : ''}`);
+        slam(
+          `<small>🧾 DRAGON TAX RECEIPT 🧾</small><span class="receipt">WIN ........ ${money(tax.gross)}<br>TAX (10%) .. −${money(tax.amount)}<br>REFUND ..... ${tax.spins} FREE SPIN${tax.spins > 1 ? 'S' : ''}<br><i>Thank you for your contribution.</i></span>`,
+          'receipt',
+          2600,
+        );
+        addNote(`🧾 TAX <b>−${money(tax.amount)}</b>`);
+        await machine.wait(1400);
+      } else {
+        for (const [c, r] of tax.cells) noteAt(c, r, 'Nothing to tax. He looks disappointed.', 'fortune');
+        womp();
+      }
+    }
+  }
+
+  // 🔔 the gong rings: same bet, same spots, again
+  async function gongRespin() {
+    setMsg('🔔 GONG! RESPIN!');
+    gong();
+    slam(`<small>🔔 THE GONG HAS RUNG 🔔</small>RESPIN<em>YOUR SPOTS STAY</em>`, 'free', 1500);
+    await machine.ringGongs();
   }
 
   function awardFree(n, reason, retrigger = false, start = 0) {
@@ -723,28 +972,36 @@ export function createSlots({ host, sound, music, getBalance, adjust, toast, onO
   }
 
   // ---------- walking between rooms ----------
+  // A proper walk (footsteps, head-bob, a slow slide), or, when you already walked there on the
+  // phone's map, a quick whoosh.
   const WALK_STEPS = 6;
   const WALK_GAP = 0.27;
-  function walk(then) {
+  const QUICK_MS = 550; // (the .quick-move transitions in style.css)
+  function walk(then, quick) {
     moving = true;
-    document.body.classList.add('walking');
-    footsteps(WALK_STEPS, WALK_GAP);
+    document.body.classList.add(quick ? 'quick-move' : 'walking');
+    if (quick) noise({ dur: 0.45, f0: 300, f1: 2600, vol: 0.16 });
+    else footsteps(WALK_STEPS, WALK_GAP);
     setTimeout(() => {
-      document.body.classList.remove('walking');
+      document.body.classList.remove('walking', 'quick-move');
       moving = false;
       renderDisplay();
       then?.();
-    }, WALK_STEPS * WALK_GAP * 1000);
+    }, quick ? QUICK_MS : WALK_STEPS * WALK_GAP * 1000);
   }
   const fitHeight = () => view.style.setProperty('--top', `${host.getBoundingClientRect().top + scrollY}px`);
   addEventListener('resize', () => open && fitHeight());
-  function show() {
-    if (open || moving) return;
+  /** quick: you walked here on the map already, so just whoosh in. False if you can't go now. */
+  function show({ quick = false } = {}) {
+    if (open || moving) return false;
     open = true;
     fitHeight();
     machine.start();
     renderDisplay();
     view.classList.add('open');
+    // the win tally's icons take a moment to render (a whole extra WebGL setup): do it during
+    // the walk in (a CSS slide the compositor runs) instead of freezing the first win
+    if (!icons) setTimeout(() => icon('sapph'), 120);
     document.body.classList.add('in-slots');
     music?.setSong?.('slots');
     onOpen?.();
@@ -754,19 +1011,28 @@ export function createSlots({ host, sound, music, getBalance, adjust, toast, onO
       dingding(8);
       toast('🐉 Welcome to DRAGON RUSH WIN BIG! Spin it!');
       if (free) setTimeout(() => spin(), 800);
-    });
+    }, quick);
+    return true;
   }
-  function hide() {
-    if (!open || busy || moving) return;
+  function hide({ quick = false } = {}) {
+    if (!open || busy || moving) return false;
     open = false;
     autoOn = false;
     view.classList.remove('open');
     document.body.classList.remove('in-slots');
     music?.setSong?.('lobby');
     onClose?.();
-    walk(() => machine.stop());
+    walk(() => machine.stop(), quick);
+    return true;
   }
-  $$('.to-roulette').addEventListener('click', hide);
 
-  return { show, hide, spin: () => spin(), isOpen: () => open, refresh: renderDisplay };
+  return {
+    show,
+    hide,
+    spin: () => spin(),
+    isOpen: () => open,
+    /** mid-spin (or mid-walk): you can't leave yet */
+    busy: () => busy || moving,
+    refresh: renderDisplay,
+  };
 }

@@ -1,5 +1,6 @@
-// ⚙️ SETTINGS, top-right corner: your 3D character on a turntable, a character editor,
-// a store for hats and bling, and the actual settings (sound, music, Dave, motion).
+// ⚙️ YOUR STYLE, THE STORE, GOALS AND SETTINGS: four apps on your phone. Your 3D character on a
+// turntable, a character editor, a store for hats and bling, and the actual settings (sound, music,
+// Dave, motion).
 
 import { AvatarStage, BASE, CATALOG, SLOTS, REQUIRED_SLOTS, DEFAULT_LOOK, portrait } from './avatar.js';
 import { itemLevel } from './levels.js';
@@ -11,16 +12,15 @@ const money = (n) => '$' + Math.round(n).toLocaleString('en-US');
 const byId = (id) => CATALOG.find((c) => c.id === id);
 
 /**
- * @param button    the top-right button (gets your portrait)
  * @param prefs     [{ id, label, desc, get: () => bool, set: (bool) => void }]
- * @param pause3d / resume3d  only one 3D room renders at a time
  * @param preview   { tone(id), win(id) }: hear a ringtone, see a win style
  * @param wallet    the store only takes wallet money ({ cash(), spend(v) })
  * @param levels    fancier items need a level ({ level(), progress() })
- * @param onWithdraw  open the cash-out dialog
- * @param goals     the Goals tab: { html(), input(el), trophies() }
+ * @param goals     the Goals app: { html(), input(el), trophies() }
+ * @param openApp   (id) => show another phone app
+ * @returns app(id) to plug into the phone, plus your look
  */
-export function createSettings({ button, store, sound, toast, wallet, levels, goals, onWithdraw, prefs, pause3d, resume3d, preview: demo = {} }) {
+export function createSettings({ store, sound, toast, wallet, levels, goals, prefs, openApp, preview: demo = {} }) {
   const getBalance = () => wallet.cash();
   let look = { ...DEFAULT_LOOK, ...store.get('fr.look', {}) };
   let owned = new Set(store.get('fr.owned', ['tshirt']));
@@ -31,91 +31,24 @@ export function createSettings({ button, store, sound, toast, wallet, levels, go
   };
   const listeners = [];
 
-  function refreshButton() {
+  // your face, for the Style app's icon
+  let face = '';
+  function refreshFace() {
     try {
-      button.querySelector('img').src = portrait(look);
+      face = portrait(look);
     } catch {
-      // no WebGL for portraits: the gear alone will do
+      face = ''; // no WebGL for portraits: the emoji will do
     }
   }
-  refreshButton();
+  refreshFace();
 
-  let el = null;
+  let host = null; // the phone view the app is drawn in
   let stage = null;
-  let tab = 'character';
+  let tab = null; // which of our apps is showing
   let trying = null; // a store item you're trying on (not bought)
   let storeSlot = 'all';
-
-  const onKey = (e) => {
-    if (e.code === 'Escape') close();
-    if (e.code === 'Space' || e.code === 'Escape') {
-      e.stopPropagation();
-      if (e.target.tagName !== 'BUTTON') e.preventDefault();
-    }
-  };
-
-  function open(which = 'character') {
-    if (el) return;
-    tab = which;
-    el = document.createElement('div');
-    el.className = 'settings';
-    el.innerHTML = `
-      <div class="st-stage"></div>
-      <div class="st-hint">Drag to spin 👆</div>
-      <aside class="st-panel">
-        <div class="st-head"><h2>⚙️ Settings</h2><button type="button" class="st-close" aria-label="Close">×</button></div>
-        <div class="st-tabs" role="tablist">
-          <button type="button" data-tab="character">👤 Character</button>
-          <button type="button" data-tab="store">🛍️ Store</button>
-          <button type="button" data-tab="goals">🏆 Goals</button>
-          <button type="button" data-tab="settings">⚙️ Settings</button>
-        </div>
-        <div class="st-body"></div>
-        <div class="st-foot">
-          <span class="st-wallet">👛 Wallet <b class="st-bal"></b></span>
-          <button type="button" class="btn st-withdraw">Cash out</button>
-          <span class="st-lvl"></span>
-        </div>
-      </aside>`;
-    document.body.appendChild(el);
-    document.body.classList.add('settings-on');
-    requestAnimationFrame(() => el?.classList.add('on'));
-    addEventListener('keydown', onKey, true);
-    pause3d();
-    stage = new AvatarStage(el.querySelector('.st-stage'), look);
-    stage.setShelf(goals.trophies());
-    el.querySelector('.st-close').addEventListener('click', close);
-    el.querySelector('.st-withdraw').addEventListener('click', () => onWithdraw());
-    el.querySelector('.st-tabs').addEventListener('click', (e) => {
-      const b = e.target.closest('[data-tab]');
-      if (b) show(b.dataset.tab);
-    });
-    el.querySelector('.st-body').addEventListener('click', onBodyClick);
-    el.querySelector('.st-body').addEventListener('change', onToggle);
-    show(tab);
-    sound.blip(880, 0.05, 'triangle', 0.08);
-  }
-
-  function close() {
-    if (!el) return;
-    const dying = el;
-    const s = stage;
-    el = null;
-    stage = null;
-    trying = null;
-    showPhone = false;
-    dying.classList.remove('on');
-    removeEventListener('keydown', onKey, true);
-    setTimeout(() => {
-      s?.dispose();
-      dying.remove();
-      document.body.classList.remove('settings-on');
-      resume3d();
-    }, 350);
-    refreshButton();
-  }
-
   let showPhone = false;
+
   function preview() {
     const l = trying ? { ...look, [trying.slot]: trying.id } : look;
     stage?.setLook(l, { phoneInHand: showPhone || PHONE_SLOTS.has(trying?.slot) });
@@ -137,34 +70,12 @@ export function createSettings({ button, store, sound, toast, wallet, levels, go
     look = { ...look, ...patch };
     save();
     preview();
+    refreshFace();
     listeners.forEach((fn) => fn(look));
     sound.blip(1200, 0.04, 'triangle', 0.07);
   }
 
-  // ---------- tabs ----------
-  function show(which) {
-    if (!el) return;
-    if (tab === 'store' && which !== 'store' && (trying || showPhone)) {
-      trying = null;
-      showPhone = false;
-      preview();
-    }
-    tab = which;
-    el.querySelectorAll('.st-tabs [data-tab]').forEach((b) => b.classList.toggle('on', b.dataset.tab === which));
-    renderFoot();
-    const body = el.querySelector('.st-body');
-    body.innerHTML = which === 'store' ? storeHtml() : which === 'settings' ? prefsHtml() : which === 'goals' ? goals.html() : characterHtml();
-    body.scrollTop = 0;
-  }
-
-  function renderFoot() {
-    if (!el) return;
-    const p = levels.progress();
-    el.querySelector('.st-bal').textContent = money(getBalance());
-    el.querySelector('.st-lvl').innerHTML = `⭐ Level ${p.level} <i style="--p:${(p.into / p.need).toFixed(3)}"></i>`;
-    el.querySelector('.st-lvl').title = `${p.into} / ${p.need} XP to level ${p.level + 1}`;
-  }
-
+  // ---------- the apps' insides ----------
   const swatches = (key, colors) =>
     `<div class="st-swatches">${colors
       .map((c) => `<button type="button" class="st-sw${look[key] === c ? ' on' : ''}" data-set="${key}" data-val="${c}" style="--c:${c}" aria-label="${c}"></button>`)
@@ -202,7 +113,6 @@ export function createSettings({ button, store, sound, toast, wallet, levels, go
     const items = CATALOG.filter((c) => c.price > 0 && (storeSlot === 'all' || c.slot === storeSlot));
     const filters = [['all', '✨ All'], ...SLOTS];
     return `
-      <p class="st-note">The store only takes wallet money 👛: cash out your chips below. Try anything on for free.</p>
       <div class="st-chips st-filters">${filters
         .map(([v, label]) => `<button type="button" class="st-chip${storeSlot === v ? ' on' : ''}" data-filter="${v}">${label}</button>`)
         .join('')}</div>
@@ -228,7 +138,8 @@ export function createSettings({ button, store, sound, toast, wallet, levels, go
             ${btn}
           </div>`;
         })
-        .join('')}</div>`;
+        .join('')}</div>
+      <p class="st-note">The store only takes wallet money 👛. Cash out your chips in the 🏦 Bank.</p>`;
   }
 
   function prefsHtml() {
@@ -243,48 +154,112 @@ export function createSettings({ button, store, sound, toast, wallet, levels, go
       <p class="st-note">Your character and everything you've bought are saved in this browser.</p>`;
   }
 
-  // ---------- clicks ----------
-  function onBodyClick(e) {
-    const t = e.target.closest('button');
-    if (!t) return;
-    if (goals.input(t)) {
-      show(tab);
+  // the strip under the turntable: your wallet and your level
+  function barHtml() {
+    const p = levels.progress();
+    return `<span class="sa-wallet">👛 <b>${money(getBalance())}</b></span>
+      <button type="button" class="sa-cash" data-app="bank">Cash out</button>
+      <span class="st-lvl" title="${p.into} / ${p.need} XP to level ${p.level + 1}">⭐ Level ${p.level} <i style="--p:${(p.into / p.need).toFixed(3)}"></i></span>`;
+  }
+
+  const BODY = { style: characterHtml, store: storeHtml, goals: () => goals.html(), settings: prefsHtml };
+
+  function redraw() {
+    if (!host) return;
+    const body = host.querySelector('.ph-scroll');
+    const top = body.scrollTop;
+    body.innerHTML = BODY[tab]();
+    body.scrollTop = top;
+    const bar = host.querySelector('.sa-bar');
+    if (bar) bar.innerHTML = barHtml();
+  }
+
+  // ---------- plugging into the phone ----------
+  function app(id, { label, emoji, title, sub, stageH = 0, bar = false, dock = false, icon }) {
+    return {
+      id,
+      label,
+      emoji,
+      dock,
+      icon,
+      html: (header) => `${header(title, sub)}
+        ${stageH ? `<div class="sa-stage" style="height:${stageH}px"><span class="sa-hint">Drag to spin 👆</span></div>` : ''}
+        ${bar ? `<div class="sa-bar">${barHtml()}</div>` : ''}
+        <div class="ph-scroll st-body">${BODY[id]()}</div>`,
+      mount(v) {
+        host = v;
+        tab = id;
+        const box = v.querySelector('.sa-stage');
+        if (!box) return;
+        stage = new AvatarStage(box, look);
+        stage.setShelf(goals.trophies());
+        showPhone = PHONE_SLOTS.has(storeSlot) && id === 'store';
+        preview();
+      },
+      unmount() {
+        if (tab !== id) return;
+        stage?.dispose();
+        stage = null;
+        host = null;
+        tab = null;
+        trying = null;
+        showPhone = false;
+      },
+      update: redraw,
+      click,
+      change,
+    };
+  }
+
+  const apps = [
+    app('style', { label: 'Style', emoji: '👤', title: 'Your style', sub: 'you, but better', stageH: 290, icon: () => (face ? `<img class="ph-face" src="${face}" alt="">` : '') }),
+    app('store', { label: 'Store', emoji: '🛍️', title: 'Club Jackpot Store', sub: 'try anything on for free', stageH: 210, bar: true }),
+    app('goals', { label: 'Goals', emoji: '🏆', title: 'Goals', sub: 'your trophies are on the shelf', stageH: 170, bar: true }),
+    app('settings', { label: 'Settings', emoji: '⚙️', title: 'Settings', dock: true }),
+  ];
+
+  // ---------- taps ----------
+  function click(t) {
+    if (tab === 'goals' && goals.input(t)) {
+      redraw();
     } else if (t.dataset.set) {
       setLook({ [t.dataset.set]: t.dataset.val || null });
-      show(tab);
+      redraw();
     } else if (t.dataset.goto) {
       storeSlot = t.dataset.slot || 'all';
-      show('store');
+      openApp(t.dataset.goto);
     } else if (t.dataset.filter) {
       storeSlot = t.dataset.filter;
       showPhone = PHONE_SLOTS.has(storeSlot);
       preview();
-      show('store');
+      redraw();
     } else if (t.dataset.try) {
       const item = byId(t.dataset.try);
       if (['ringtone', 'winFx', 'emote'].includes(item.slot)) {
         demoItem(item);
-        return;
+        return true;
       }
       trying = trying?.id === item.id ? null : item;
       demoItem(item);
       preview();
       sound.blip(trying ? 1000 : 700, 0.05, 'triangle', 0.07);
-      show('store');
+      redraw();
     } else if (t.dataset.equip) {
       const item = byId(t.dataset.equip);
       trying = null;
       setLook({ [item.slot]: look[item.slot] === item.id && !REQUIRED_SLOTS.has(item.slot) ? null : item.id });
-      show('store');
+      redraw();
     } else if (t.dataset.buy) {
       const item = byId(t.dataset.buy);
       if (levels.level() < itemLevel(item)) {
         sound.blip(160, 0.2, 'sawtooth', 0.1);
-        return toast(`🔒 ${item.name} unlocks at level ${itemLevel(item)}. You're level ${levels.level()}: keep betting!`);
+        toast(`🔒 ${item.name} unlocks at level ${itemLevel(item)}. You're level ${levels.level()}: keep betting!`);
+        return true;
       }
       if (getBalance() < item.price) {
         sound.blip(160, 0.2, 'sawtooth', 0.1);
-        return toast(`👛 ${item.name} costs ${money(item.price)}. Your wallet has ${money(getBalance())}. Cash out some chips first.`);
+        toast(`👛 ${item.name} costs ${money(item.price)}. Your wallet has ${money(getBalance())}. Cash out some chips in the 🏦 Bank first.`);
+        return true;
       }
       wallet.spend(item.price);
       owned.add(item.id);
@@ -293,37 +268,29 @@ export function createSettings({ button, store, sound, toast, wallet, levels, go
       sound.cash();
       setLook({ [item.slot]: item.id });
       toast(`🛍️ ${item.emoji} ${item.name} bought and equipped! (-${money(item.price)})`);
-      show('store');
-    }
+      redraw();
+    } else return false;
+    return true;
   }
 
-  function onToggle(e) {
-    if (e.target.dataset.perk) return goals.input(e.target);
-    const id = e.target.dataset.pref;
+  function change(el) {
+    if (el.dataset.perk) return goals.input(el);
+    const id = el.dataset.pref;
     if (!id) return;
-    prefs.find((p) => p.id === id)?.set(e.target.checked);
-    sound.blip(e.target.checked ? 1000 : 600, 0.05, 'triangle', 0.08);
+    prefs.find((p) => p.id === id)?.set(el.checked);
+    sound.blip(el.checked ? 1000 : 600, 0.05, 'triangle', 0.08);
   }
-
-  button.addEventListener('click', () => (el ? close() : open()));
 
   return {
-    open,
-    close,
-    isOpen: () => !!el,
+    /** one of the phone apps: style, store, goals or settings */
+    app: (id) => apps.find((a) => a.id === id),
     look: () => look,
     owns: (id) => owned.has(id),
     /** wallet or level changed: redraw, keeping your scroll */
     refresh() {
-      if (!el) return;
-      const body = el.querySelector('.st-body');
-      const top = body.scrollTop;
-      show(tab);
-      body.scrollTop = top;
+      redraw();
       stage?.setShelf(goals.trophies());
     },
-    /** where the wallet sits on screen right now (for the cash-out animation) */
-    walletEl: () => el?.querySelector('.st-wallet'),
     /** fn(look) whenever your character changes */
     onChange: (fn) => listeners.push(fn),
   };

@@ -24,16 +24,11 @@
       <div class="stat"><span>Balance</span><strong id="balance">$0</strong></div>
       <div class="stat"><span>On table</span><strong id="onTable">$0</strong></div>
       <div class="stat"><span>Session</span><strong id="session">$0</strong></div>
-      <button type="button" id="walletBtn" class="stat wallet-stat" title="Your wallet: the store only takes wallet money. Click to cash out chips."><span>👛 Wallet</span><strong id="walletAmt">$0</strong></button>
-      <div id="lvlChip" class="lvl-chip"><b>1</b></div>
+      <button type="button" id="walletBtn" class="stat wallet-stat" title="Your wallet: the store only takes wallet money. Tap to open the Bank on your phone."><span>👛 Wallet</span><strong id="walletAmt">$0</strong></button>
+      <button type="button" id="lvlChip" class="lvl-chip"><b>1</b></button>
       <button id="drinksBtn" class="btn drinks-btn" title="Drinks menu &amp; VIP bottle service">🍾 Drinks</button>
-      <button id="roadmapBtn" class="btn roadmap-btn" title="What's coming next (maybe)">🔮 Coming Soon™</button>
       <button id="adBtn" class="btn ad-btn" hidden title="Broke? Watch a totally real ad for $100">📺 Watch ad: +$100</button>
-      <button id="addFundsBtn" class="btn gold">+ Add funds</button>
-      <button id="musicBtn" class="btn icon" aria-label="Toggle lobby music">🎵</button>
-      <button id="muteBtn" class="btn icon" title="Toggle sound effects" aria-label="Toggle sound effects">🔊</button>
-      <button id="phoneBtn" class="btn icon phone-btn" title="Your phone (P)" aria-label="Open your phone">📱<b class="ph-badge"></b></button>
-      <button id="profileBtn" class="profile-btn" title="Settings, your character and the store" aria-label="Settings and character"><img alt=""><span>⚙️</span></button>
+      <button id="phoneBtn" class="btn phone-btn" title="Your phone (P): map, bank, store, your style, goals, settings" aria-label="Open your phone">📱 <span>Phone</span><b class="ph-badge"></b></button>
     </div>
   </header>
 
@@ -42,9 +37,6 @@
       <div id="wheel"></div>
       <div class="history" id="history" aria-label="Recent numbers"></div>
       <div class="result" id="result" aria-live="polite"></div>
-      <span class="ts-ding" aria-hidden="true">DING DING DING!</span>
-      <button type="button" class="to-slots" id="toSlotsBtn" title="Go to the slots! DING DING!"><span class="ts-label">🎰 SLOTS</span></button>
-      <button type="button" class="to-blackjack" id="toBlackjackBtn" title="Blackjack, dealt by a very smug dealer"><span>🂡</span> BLACKJACK</button>
     </section>
 
     <section class="table-area">
@@ -76,140 +68,6 @@
       </p>
     </section>
   </main>
-
-  <dialog class="modal" id="fundsModal">
-    <div class="modal-card">
-      <button class="close" id="closeModal" aria-label="Close">×</button>
-      <h2>Add funds</h2>
-
-      <div class="pay-tabs" role="tablist" aria-label="Payment method">
-        <button type="button" class="pay-tab active" role="tab" aria-selected="true" data-pay="card">💳 Card</button>
-        <button type="button" class="pay-tab" role="tab" aria-selected="false" data-pay="swish">📱 Swish <small>(fake)</small></button>
-      </div>
-
-      <div class="pay-pane" data-pane="card">
-      <div class="notice">
-        <strong>This is a fake payment form.</strong> Nothing is charged, stored or sent anywhere.
-        Please don't type a real card — use <code>4242 4242 4242 4242</code>.
-        <button type="button" class="linkbtn" id="fillTest">Fill test card</button>
-      </div>
-
-      <div class="card-preview" id="cardPreview">
-        <div class="cp-top"><div class="emv"></div><div class="cp-brand" id="cpBrand">FAKECARD</div></div>
-        <div class="cp-number" id="cpNumber">•••• •••• •••• ••••</div>
-        <div class="cp-row">
-          <div><small>Card holder</small><span id="cpName">YOUR NAME</span></div>
-          <div><small>Expires</small><span id="cpExp">MM/YY</span></div>
-        </div>
-      </div>
-
-      <form id="fundsForm" novalidate autocomplete="off">
-        <label class="field full">Card number
-          <input id="ccNumber" inputmode="numeric" placeholder="4242 4242 4242 4242" autocomplete="off" spellcheck="false">
-        </label>
-        <label class="field full">Name on card
-          <input id="ccName" placeholder="Lucky Player" autocomplete="off" spellcheck="false">
-        </label>
-        <label class="field">Expiry
-          <input id="ccExp" inputmode="numeric" placeholder="MM/YY" autocomplete="off">
-        </label>
-        <label class="field">CVC
-          <input id="ccCvc" inputmode="numeric" placeholder="123" autocomplete="off">
-        </label>
-
-        <div class="field full">Amount
-          <div class="amounts">
-            <button type="button" class="amount-opt" data-amount="100">$100</button>
-            <button type="button" class="amount-opt" data-amount="500">$500</button>
-            <button type="button" class="amount-opt" data-amount="1000">$1,000</button>
-            <button type="button" class="amount-opt" data-amount="5000">$5,000</button>
-            <input id="ccCustom" inputmode="numeric" placeholder="Other" autocomplete="off" aria-label="Custom amount">
-          </div>
-        </div>
-
-        <p class="form-error full" id="formError" role="alert"></p>
-        <button type="submit" class="btn gold wide full" id="payBtn">Deposit $500</button>
-        <p class="tiny full">Tip: <code>4000 0000 0000 0002</code> always gets declined.</p>
-      </form>
-      </div>
-
-      <div class="pay-pane" data-pane="swish" hidden>
-        <div class="notice">
-          <strong>This is a fake Swish.</strong> No app opens, no phone number is needed and no real money moves.
-          You just approve on a pretend phone.
-        </div>
-        <div class="swish-pick" id="swishPick">
-          <div class="field full">Amount
-            <div class="amounts amounts-4">
-              <button type="button" class="amount-opt" data-amount="100">$100</button>
-              <button type="button" class="amount-opt" data-amount="500">$500</button>
-              <button type="button" class="amount-opt" data-amount="1000">$1,000</button>
-              <button type="button" class="amount-opt" data-amount="5000">$5,000</button>
-            </div>
-          </div>
-          <button type="button" class="btn swish-go wide" id="swishBtn">📱 Swish $500</button>
-        </div>
-        <div class="swish-phone" id="swishPhone" hidden>
-          <div class="sp-notch"></div>
-          <div class="sp-screen">
-            <div class="sp-app">📱 Swish <small>(not really)</small></div>
-            <div class="sp-to">Pay to<br><b>SUPER JACKPOT ROULETTE</b></div>
-            <div class="sp-amt" id="swishAmt">$500</div>
-            <div class="sp-msg">Message: “definitely a good idea”</div>
-            <button type="button" class="sp-approve" id="swishApprove">Approve with Pretend-ID™</button>
-            <div class="sp-wait" id="swishWait" hidden><div class="spinner"></div>Scanning your imaginary fingerprint…</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="state" id="processing" hidden>
-        <div class="spinner"></div>
-        <p>Pretending to contact the bank…</p>
-      </div>
-      <div class="state" id="success" hidden>
-        <div class="check">✓</div>
-        <p><strong id="successAmount">$0</strong> of fake money added</p>
-      </div>
-
-      <button class="linkbtn reset" id="resetBalance" type="button">Reset balance to $1,000</button>
-    </div>
-  </dialog>
-
-  <dialog class="modal wallet-modal" id="walletModal">
-    <div class="modal-card">
-      <button class="close" id="closeWallet" aria-label="Close">×</button>
-      <h2>👛 Cash out</h2>
-      <p class="wm-text">The store only takes wallet money. Exchange chips from the casino for wallet money, up to a daily limit that grows as you level up.</p>
-      <div class="wm-stats">
-        <div><small>Casino</small><b id="wmCasino">$0</b></div>
-        <div class="wm-arrow">➜</div>
-        <div><small>Wallet</small><b id="wmWallet">$0</b></div>
-      </div>
-      <p class="wm-rate" id="wmRate"></p>
-      <div class="wm-limit"><span id="wmLeft"></span><div class="wm-bar"><i id="wmBar"></i></div></div>
-      <input type="range" id="wmRange" min="0" step="1" aria-label="Amount to cash out">
-      <div class="wm-chips">
-        <button type="button" class="st-chip" data-amt="50">$50</button>
-        <button type="button" class="st-chip" data-amt="100">$100</button>
-        <button type="button" class="st-chip" data-amt="250">$250</button>
-        <button type="button" class="st-chip" data-amt="max">Max</button>
-      </div>
-      <button type="button" class="btn gold wm-go" id="wmGo">Cash out</button>
-      <p class="wm-foot" id="wmFoot"></p>
-    </div>
-  </dialog>
-
-  <dialog class="modal roadmap" id="roadmapModal">
-    <div class="modal-card">
-      <button class="close" id="closeRoadmap" aria-label="Close">×</button>
-      <h2>🔮 Coming Soon™</h2>
-      <p class="rm-sub">Roadmap subject to change, vibes, and whether we can be bothered.</p>
-      <div class="rm-headliners" id="rmHeadliners"></div>
-      <h3 class="rm-h3">🧪 Also maybe, possibly, who knows</h3>
-      <ul class="rm-list" id="rmList"></ul>
-      <p class="rm-foot">None of these are promises. Some of these are threats.</p>
-    </div>
-  </dialog>
 
   <div class="toast" id="toast" role="status" popover="manual"></div>
 

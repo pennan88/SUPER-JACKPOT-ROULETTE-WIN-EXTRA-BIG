@@ -134,7 +134,7 @@ export function createGoals({ store, levels, wallet, toast, sound, flair, onChan
     sound.blip(660, 0.15, 'triangle', 0.12);
     sound.blip(990, 0.15, 'triangle', 0.12, 0.12);
     sound.blip(1320, 0.3, 'triangle', 0.12, 0.24);
-    setTimeout(() => toast(`🏆 Achievement unlocked: ${a.name}! +${ACH_XP} XP. It's on your shelf in ⚙️ Settings.`), 400);
+    setTimeout(() => toast(`🏆 Achievement unlocked: ${a.name}! +${ACH_XP} XP. It's on your shelf in 📱 → 🏆 Goals.`), 400);
   }
 
   // ---------- listening ----------
@@ -171,7 +171,7 @@ export function createGoals({ store, levels, wallet, toast, sound, flair, onChan
       }
       if (card.stamps === CARD_SIZE) card.lost = 0;
       if (card.stamps > before && card.stamps === CARD_SIZE) {
-        setTimeout(() => toast('🎟️ Your loyalty card is full! Redeem it in ⚙️ Settings → 🏆 Goals.'), 2500);
+        setTimeout(() => toast('🎟️ Your loyalty card is full! Redeem it in 📱 → 🏆 Goals.'), 2500);
       }
     }
     handle('spin', e);

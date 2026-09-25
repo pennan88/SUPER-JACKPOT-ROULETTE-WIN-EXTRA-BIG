@@ -20,6 +20,9 @@ import { CATALOG } from './avatar.js';
 import { createGoals, PERKS, BOOTH_DISCOUNT } from './goals.js';
 import { emit } from './events.js';
 import { createPerkDecor } from './perks3d.js';
+import { createRoadmap } from './roadmap.js';
+import { createMap } from './map.js';
+import { createBank } from './bank.js';
 import { createBlackjack } from './blackjack.js';
 
 const rand = (a, b) => a + Math.random() * (b - a);
@@ -644,8 +647,8 @@ function clearHighlights() {
 function placeBet(key, amount = chipValue, record = true, delay = 0, maxChips = 6) {
   if (spinning) return false;
   if (balance < amount) {
-    toast('Not enough balance — add some fake funds');
-    $('addFundsBtn').classList.add('pulse');
+    toast('Not enough balance: add some fake funds in the 📱 🏦 Bank');
+    nudgeBank();
     return false;
   }
   clearHighlights();
@@ -761,13 +764,13 @@ document.addEventListener('keydown', (e) => {
   if (blackjack?.isOpen()) return blackjack.key(e);
   if (slots?.isOpen()) {
     // in the slots room: Space pulls the lever, Escape walks back to roulette
-    if (e.code === 'Space' && !$('fundsModal').open && !$('roadmapModal').open) {
+    if (e.code === 'Space') {
       e.preventDefault();
       slots.spin(true);
     } else if (e.code === 'Escape') slots.hide();
     return;
   }
-  if (e.code === 'Space' && !$('fundsModal').open && !$('roadmapModal').open && document.activeElement.tagName !== 'INPUT') {
+  if (e.code === 'Space' && document.activeElement.tagName !== 'INPUT') {
     e.preventDefault();
     spin();
   }
@@ -863,8 +866,8 @@ function settle(n) {
     render();
     if (balance < 1) {
       emit('broke');
-      toast('Out of chips! Watch an ad for $100, or top up with a fake card 📺');
-      $('addFundsBtn').classList.add('pulse');
+      toast('Out of chips! Watch an ad for $100, or top up with a fake card in the 📱 🏦 Bank 📺');
+      nudgeBank();
     }
   }, 1800);
   render();
@@ -945,32 +948,18 @@ function toast(msg) {
   toastTimer = setTimeout(() => t.classList.remove('show'), 2600);
 }
 
-// ---------- mute ----------
-function renderMute() {
-  $('muteBtn').textContent = sound.muted ? '🔇' : '🔊';
+// ---------- sound effects and lobby music (switches in 📱 Settings) ----------
+function setMuted(on) {
+  sound.muted = on;
+  store.set('fr.muted', on);
 }
-$('muteBtn').addEventListener('click', () => {
-  sound.muted = !sound.muted;
-  store.set('fr.muted', sound.muted);
-  renderMute();
-});
-renderMute();
-
-// ---------- lobby music ----------
 const music = new LobbyMusic(() => sound.ensure(), () => sound.bus());
 let musicOn = store.get('fr.music', true);
-function renderMusic() {
-  const b = $('musicBtn');
-  b.classList.toggle('off', !musicOn);
-  b.title = musicOn ? 'Lobby music: on' : 'Lobby music: off';
+function setMusic(on) {
+  musicOn = on;
+  store.set('fr.music', on);
+  on ? music.start() : music.stop();
 }
-$('musicBtn').addEventListener('click', () => {
-  musicOn = !musicOn;
-  store.set('fr.music', musicOn);
-  musicOn ? music.start() : music.stop();
-  renderMusic();
-});
-renderMusic();
 // Browsers only allow audio after a user gesture, so start on the first one.
 const kickoff = () => {
   if (musicOn) music.start();
@@ -980,290 +969,22 @@ const kickoff = () => {
 addEventListener('pointerdown', kickoff);
 addEventListener('keydown', kickoff);
 
-// ---------- roadmap (Coming Soon™) ----------
-// Keep in sync with the "COMING SOON™" section of README.md
-const HEADLINERS = [
-  { id: 'multiplayer', icon: '👯', title: 'MULTIPLAYER', desc: 'Lose fake money together, in real time, with your friends.', tag: 'perchance', pct: 35 },
-  { id: 'slots', icon: '🎰', title: 'SLOTS', desc: 'SHIPPED! 🐉 DRAGON RUSH WIN BIG is live: 7×7 tumbles, ×1024 multiplier spots. Hit the SLOTS ➜ arrow. DING DING DING.', tag: 'LIVE ✅', pct: 100 },
-  { id: 'funny', icon: '🤡', title: 'OTHER FUNNY STUFF', desc: "You'll know it when you see it.", tag: 'guaranteed', pct: 100 },
-];
-const MAYBES = [
-  ['🃏', 'Blackjack table in the corner, dealt by a suspiciously smug dealer', 'maybe'],
-  ['🏆', 'Leaderboard of Shame, ranked by the biggest fake loss in one spin', 'someday'],
-  ['🐔', 'Chicken mode: the ball is a tiny rubber chicken. Pays the same. Sounds worse.', 'please'],
-  ['🍸', 'Free drinks: a waiter walks past every 30 seconds and never stops at your table', 'LIVE ✅'],
-  ['🍾', 'VIP bottle service: bottle girls, sparklers, and your song from YouTube', 'LIVE ✅'],
-  ['🧽', "Bar tab: can't pay? Wash dishes in the kitchen until the chef lets you go", 'LIVE ✅'],
-  ['🍺', 'Dave remembers you: he borrows chips off your rack and texts you "u up? 🎰"', 'LIVE ✅'],
-  ['🤕', 'Close the tab drunk and wake up hungover in a hotel room with a traffic cone', 'LIVE ✅'],
-  ['📱', 'A phone: text Dave back (and regret it), call a cab, order a kebab, take selfies', 'LIVE ✅'],
-  ['🎩', 'Your own 3D character, and a store full of hats (top-right corner)', 'LIVE ✅'],
-  ['🎲', 'Craps, purely so we can say "craps" in the game', 'lol'],
-  ['🧓', 'Your grandma, who tells you to stop after 3 losses in a row', 'she insists'],
-  ['🎟️', 'Loyalty card: earn points for every fake dollar lost, redeem for nothing', 'unlikely'],
-  ['📉', 'Fake stock ticker of your net worth, with dramatic crash sounds', 'maybe'],
-  ['🌙', 'Night mode, even though casinos famously have no clocks or windows', 'ironic'],
-  ['🔁', 'Martingale button: doubles your bet after every loss until the heat death of the universe', 'dangerous'],
-  ['🎤', 'Hype announcer who screams "HE\'S ON FIRE" after two wins in a row', 'if bored'],
-  ['🎁', 'Daily login bonus of $1, delivered via a 30-second unskippable animation', 'LIVE ✅'],
-  ['🐋', 'Whale mode: 10× bigger chips and a velvet rope around the table', 'someday'],
-  ['🛸', 'Alien abduction: a UFO beams your chips away (it\'s in the T&Cs)', 'classified'],
-  ['🎮', 'Controller support, because roulette on a gamepad is how nature intended', 'maybe'],
-  ['🥚', 'Easter eggs we will absolutely forget where we hid', 'already lost'],
-];
-const hype = store.get('fr.hype', {});
-const hypeBtn = (id) =>
-  `<button type="button" class="rm-hype" data-hype="${id}" title="Hype it (changes nothing, feels great)">🔥 <b>${hype[id] || 0}</b></button>`;
-
-$('rmHeadliners').innerHTML = HEADLINERS.map(
-  (h) => `<div class="rm-card">
-    <div class="rm-icon">${h.icon}</div>
-    <div class="rm-title">${h.title}</div>
-    <div class="rm-desc">${h.desc}</div>
-    <div class="rm-meter" title="${h.pct}% likely (source: vibes)"><i style="width:${h.pct}%"></i></div>
-    <div class="rm-row"><span class="rm-tag t-${h.pct}">${h.tag}</span>${hypeBtn(h.id)}</div>
-  </div>`
-).join('');
-$('rmList').innerHTML = MAYBES.map(
-  ([icon, text, tag], i) =>
-    `<li><span class="rm-li-icon">${icon}</span><span class="rm-li-text">${text}</span><span class="rm-tag${tag.startsWith('LIVE') ? ' live' : ''}">${tag}</span>${hypeBtn('m' + i)}</li>`
-).join('');
-
-document.querySelector('.roadmap').addEventListener('click', (e) => {
-  const b = e.target.closest('.rm-hype');
-  if (!b) return;
-  const id = b.dataset.hype;
-  hype[id] = (hype[id] || 0) + 1;
-  store.set('fr.hype', hype);
-  b.querySelector('b').textContent = hype[id];
-  b.classList.remove('bump');
-  void b.offsetWidth;
-  b.classList.add('bump');
-  sound.chip();
-});
-$('roadmapBtn').addEventListener('click', () => $('roadmapModal').showModal());
-$('closeRoadmap').addEventListener('click', () => $('roadmapModal').close());
-$('roadmapModal').addEventListener('click', (e) => {
-  if (e.target === e.currentTarget) e.currentTarget.close();
-});
-
-// ---------- fake funds ----------
-const modal = $('fundsModal');
-const form = $('fundsForm');
-const f = {
-  number: $('ccNumber'),
-  name: $('ccName'),
-  exp: $('ccExp'),
-  cvc: $('ccCvc'),
-  custom: $('ccCustom'),
-};
-let depositAmount = 500;
-
-$('addFundsBtn').addEventListener('click', () => {
-  $('addFundsBtn').classList.remove('pulse');
-  resetForm();
-  modal.showModal();
-  if (payMethod === 'card') f.number.focus();
-});
-
-// 💳 card or 📱 (fake) Swish
-let payMethod = 'card';
-function setPayMethod(m) {
-  payMethod = m;
-  document.querySelectorAll('.pay-tab').forEach((t) => {
-    t.classList.toggle('active', t.dataset.pay === m);
-    t.setAttribute('aria-selected', t.dataset.pay === m);
-  });
-  document.querySelectorAll('.pay-pane').forEach((p) => (p.hidden = p.dataset.pane !== m));
-  $('formError').textContent = '';
-}
-document.querySelectorAll('.pay-tab').forEach((t) => t.addEventListener('click', () => setPayMethod(t.dataset.pay)));
-$('swishBtn').addEventListener('click', () => {
-  if (!depositAmount) return;
-  $('swishAmt').textContent = money(depositAmount);
-  $('swishPick').hidden = true;
-  $('swishPhone').hidden = false;
-  $('swishApprove').hidden = false;
-  $('swishWait').hidden = true;
-  sound.blip(1320, 0.08, 'sine', 0.1);
-  sound.blip(1760, 0.12, 'sine', 0.1, 0.09);
-});
-$('swishApprove').addEventListener('click', () => {
-  $('swishApprove').hidden = true;
-  $('swishWait').hidden = false;
-  const amount = depositAmount;
-  setTimeout(() => {
-    $('swishPhone').hidden = true;
-    deposit(amount, '📱 Swished');
-  }, 1500);
-});
-$('closeModal').addEventListener('click', () => modal.close());
-modal.addEventListener('click', (e) => {
-  if (e.target === modal) modal.close();
-});
-
-const digits = (s) => s.replace(/\D/g, '');
-
-function brandOf(num) {
-  if (/^4/.test(num)) return 'visa';
-  if (/^(5[1-5]|2[2-7])/.test(num)) return 'mastercard';
-  if (/^3[47]/.test(num)) return 'amex';
-  if (/^6/.test(num)) return 'discover';
-  return '';
-}
-
-function luhn(num) {
-  let sum = 0;
-  for (let i = 0; i < num.length; i++) {
-    let d = +num[num.length - 1 - i];
-    if (i % 2) {
-      d *= 2;
-      if (d > 9) d -= 9;
-    }
-    sum += d;
-  }
-  return num.length >= 13 && sum % 10 === 0;
-}
-
-f.number.addEventListener('input', () => {
-  const d = digits(f.number.value).slice(0, 19);
-  f.number.value = d.replace(/(.{4})/g, '$1 ').trim();
-  updatePreview();
-});
-f.exp.addEventListener('input', () => {
-  let d = digits(f.exp.value).slice(0, 4);
-  if (d.length === 1 && +d > 1) d = '0' + d;
-  f.exp.value = d.length > 2 ? d.slice(0, 2) + '/' + d.slice(2) : d;
-  updatePreview();
-});
-f.cvc.addEventListener('input', () => {
-  f.cvc.value = digits(f.cvc.value).slice(0, 4);
-});
-f.name.addEventListener('input', updatePreview);
-
-document.querySelectorAll('.amount-opt').forEach((b) =>
-  b.addEventListener('click', () => {
-    depositAmount = +b.dataset.amount;
-    f.custom.value = '';
-    updateAmount();
-  })
-);
-f.custom.addEventListener('input', () => {
-  f.custom.value = digits(f.custom.value).slice(0, 6);
-  depositAmount = +f.custom.value || 0;
-  updateAmount();
-});
-
-function updateAmount() {
-  document.querySelectorAll('.amount-opt').forEach((b) =>
-    b.classList.toggle('active', !f.custom.value && +b.dataset.amount === depositAmount)
-  );
-  $('payBtn').textContent = depositAmount ? `Deposit ${money(depositAmount)}` : 'Deposit';
-  $('swishBtn').textContent = `📱 Swish ${money(depositAmount || 0)}`;
-}
-
-function updatePreview() {
-  const d = digits(f.number.value);
-  const masked = (d + '•'.repeat(Math.max(0, 16 - d.length))).replace(/(.{4})/g, '$1 ').trim();
-  $('cpNumber').textContent = masked;
-  $('cpName').textContent = f.name.value.trim().toUpperCase() || 'YOUR NAME';
-  $('cpExp').textContent = f.exp.value || 'MM/YY';
-  const brand = brandOf(d);
-  $('cardPreview').dataset.brand = brand;
-  $('cpBrand').textContent = brand ? brand.toUpperCase() : 'FAKECARD';
-}
-
-$('fillTest').addEventListener('click', () => {
-  f.number.value = '4242 4242 4242 4242';
-  f.name.value = 'Lucky Player';
-  const y = (new Date().getFullYear() + 3) % 100;
-  f.exp.value = `12/${String(y).padStart(2, '0')}`;
-  f.cvc.value = '123';
-  updatePreview();
-  $('formError').textContent = '';
-});
-
-function resetForm() {
-  form.reset();
-  form.hidden = false;
-  $('processing').hidden = true;
-  $('success').hidden = true;
-  $('formError').textContent = '';
-  form.querySelectorAll('.invalid').forEach((el) => el.classList.remove('invalid'));
-  depositAmount = 500;
-  $('swishPick').hidden = false;
-  $('swishPhone').hidden = true;
-  updateAmount();
-  updatePreview();
-}
-
-function validate() {
-  const errs = [];
-  const mark = (el, bad, msg) => {
-    el.classList.toggle('invalid', bad);
-    if (bad) errs.push(msg);
-  };
-  const num = digits(f.number.value);
-  mark(f.number, !luhn(num), 'Card number is invalid (try 4242 4242 4242 4242)');
-  mark(f.name, !f.name.value.trim(), 'Enter a name');
-  const [mm, yy] = f.exp.value.split('/').map(Number);
-  const now = new Date();
-  const expired =
-    !mm || mm > 12 || yy == null || isNaN(yy) ||
-    2000 + yy < now.getFullYear() || (2000 + yy === now.getFullYear() && mm < now.getMonth() + 1);
-  mark(f.exp, expired, 'Expiry date is invalid or in the past');
-  mark(f.cvc, !/^\d{3,4}$/.test(f.cvc.value), 'CVC must be 3–4 digits');
-  mark(f.custom, depositAmount < 1 || depositAmount > 100000, 'Amount must be between $1 and $100,000');
-  return errs;
-}
-
-form.addEventListener('submit', (e) => {
-  e.preventDefault();
-  const errs = validate();
-  $('formError').textContent = errs[0] || '';
-  if (errs.length) return;
-
-  // Stripe-style "decline" test card, for fun
-  const declined = digits(f.number.value) === '4000000000000002';
-  const amount = depositAmount;
-  // Card details are never stored or sent — wipe them right away.
-  form.reset();
-  updatePreview();
-  form.hidden = true;
-  $('processing').hidden = false;
-
-  setTimeout(() => {
-    $('processing').hidden = true;
-    if (declined) {
-      form.hidden = false;
-      updateAmount();
-      $('formError').textContent = 'Card declined (that’s the decline test card 😉)';
-      return;
-    }
-    deposit(amount);
-  }, 1300);
-});
-
-function deposit(amount, how = '') {
+// ---------- 💳 fake funds (paid for in the 🏦 Bank app on your phone) ----------
+function deposit(amount) {
   balance += amount;
-  // once the dialog closes, the cashier's chips fly into your rack
+  // once the phone is away, the cashier's chips fly into your rack
   pieces(amount, 10).forEach((p, i) =>
-    fly($('addFundsBtn'), rackPoint(p.denom), p.denom, {
-      delay: 1550 + i * 90,
+    fly($('phoneBtn'), rackPoint(p.denom), p.denom, {
+      delay: 1950 + i * 90,
       onLand: () => { addBank(p.value); sound.chip(); },
     })
   );
   render();
-  sound.cash();
-  $('successAmount').textContent = money(amount);
-  $('success').hidden = false;
-  setTimeout(() => modal.open && modal.close(), 1400);
-  toast(`${how ? how + ': ' : ''}+${money(amount)} fake dollars added`);
 }
 
-$('resetBalance').addEventListener('click', () => {
-  if (spinning) return;
-  if (!confirm(`Reset balance to ${money(START_BALANCE)} and clear history?`)) return;
+function resetBalance() {
+  if (spinning) return false;
+  if (!confirm(`Reset balance to ${money(START_BALANCE)} and clear history?`)) return false;
   bets.clear();
   actions = [];
   lastBets = null;
@@ -1274,8 +995,8 @@ $('resetBalance').addEventListener('click', () => {
   clearHighlights();
   hideResult();
   render();
-  modal.close();
-});
+  return true;
+}
 
 // ---------- 🍸 free drinks (not for you) ----------
 const booze = createBar({
@@ -1291,7 +1012,7 @@ const booze = createBar({
 });
 startWaiter({
   stage: document.querySelector('.stage'),
-  canWalk: () => !fxActive() && !document.body.classList.contains('bonus-active') && !['vip-party-on', 'kitchen-on', 'hangover-on', 'phone-on', 'settings-on', 'in-blackjack'].some((c) => document.body.classList.contains(c)) && !slots?.isOpen(),
+  canWalk: () => !fxActive() && !document.body.classList.contains('bonus-active') && !['vip-party-on', 'kitchen-on', 'hangover-on', 'phone-on', 'in-blackjack'].some((c) => document.body.classList.contains(c)) && !slots?.isOpen(),
   onClink: () => sound.clink(),
   pickDrink: booze.pickDrink,
   getTarget: booze.target,
@@ -1319,7 +1040,7 @@ const tab = createTab({
   resume3d: () => resume3dRooms(),
   isBusy: () =>
     spinning || fxActive() || !!document.querySelector('dialog[open]') ||
-    ['vip-party-on', 'bonus-active', 'hangover-on', 'phone-on', 'settings-on', 'in-blackjack'].some((c) => document.body.classList.contains(c)),
+    ['vip-party-on', 'bonus-active', 'hangover-on', 'phone-on', 'in-blackjack'].some((c) => document.body.classList.contains(c)),
 });
 
 // ---------- 🍺 Dave (he remembers you) ----------
@@ -1350,7 +1071,7 @@ const dave = createDave({
   // (an angry Dave doesn't care that your phone is out: he closes it and comes over anyway)
   isIdle: (ignorePhone = false) =>
     !spinning && !fxActive() && !slots?.isOpen() && !document.querySelector('dialog[open]') &&
-    !['vip-party-on', 'bonus-active', 'kitchen-on', 'hangover-on', 'settings-on', 'in-blackjack'].some((c) => document.body.classList.contains(c)) &&
+    !['vip-party-on', 'bonus-active', 'kitchen-on', 'hangover-on', 'in-blackjack'].some((c) => document.body.classList.contains(c)) &&
     (ignorePhone || !document.body.classList.contains('phone-on')),
   onSpill: () => {
     document.body.classList.add('sticky-table');
@@ -1380,7 +1101,7 @@ const hangover = createHangover({
   },
 });
 
-// ---------- ⚙️ settings, your character and the store (top-right corner) ----------
+// ---------- 📱 your style, the store and the settings: apps on your phone ----------
 const prefs = {
   banners: store.get('fr.pref.banners', true),
   reduceMotion: store.get('fr.pref.motion', false),
@@ -1399,7 +1120,7 @@ const goals = createGoals({
   sound,
   flair,
   onChange: () => {
-    settings.refresh();
+    refreshApps();
     renderProgress();
   },
   onPerks: () => applyPerks(),
@@ -1422,19 +1143,16 @@ const settings = createSettings({
     tone: (id) => phone?.playTone(id),
     win: (id) => id !== 'classic' ? flair.burst(id, { x: innerWidth * 0.35, y: innerHeight * 0.45 }, 2) : toast('🪙 The classic: coins and confetti, like always.'),
   },
-  button: $('profileBtn'),
   store,
   sound,
   toast,
   wallet,
   levels,
   goals,
-  onWithdraw: () => openCashOut(),
-  pause3d: () => pause3dRooms(),
-  resume3d: () => resume3dRooms(),
+  openApp: (id) => phone?.open(id),
   prefs: [
-    { id: 'sfx', label: '🔊 Sound effects', desc: 'Chips, spins, dings, Dave.', get: () => !sound.muted, set: (on) => sound.muted === on && $('muteBtn').click() },
-    { id: 'music', label: '🎵 Lobby music', desc: 'The big band, and your bottle-party songs.', get: () => musicOn, set: (on) => musicOn !== on && $('musicBtn').click() },
+    { id: 'sfx', label: '🔊 Sound effects', desc: 'Chips, spins, dings, Dave.', get: () => !sound.muted, set: (on) => setMuted(!on) },
+    { id: 'music', label: '🎵 Lobby music', desc: 'The big band, and your bottle-party songs.', get: () => musicOn, set: (on) => setMusic(on) },
     {
       id: 'banners',
       label: "📱 Dave's text banners",
@@ -1458,90 +1176,75 @@ const settings = createSettings({
     },
   ],
 });
+// the wallet or your level changed: redraw whichever app is showing
+function refreshApps() {
+  settings.refresh();
+  phone?.refresh('bank');
+}
 
 setWinFlair(({ level, origin }) => {
   const style = settings.look().winFx;
   if (style && style !== 'classic') flair.burst(style, origin, level);
 });
 
-// ---------- 👛 cash out: chips → wallet, up to a daily limit that grows with your level ----------
-let cashAmt = 100;
 function renderProgress() {
   $('walletAmt').textContent = money(wallet.cash() - pendingCash);
   const p = levels.progress();
   const chip = $('lvlChip');
   chip.querySelector('b').textContent = p.level;
   chip.style.setProperty('--p', (p.into / p.need).toFixed(3));
-  chip.title = `Level ${p.level} · ${p.into} / ${p.need} XP to level ${p.level + 1}`;
+  chip.title = `Level ${p.level} · ${p.into} / ${p.need} XP to level ${p.level + 1}. Tap for your goals.`;
 }
 
-// cashAmt is in wallet dollars; it costs cashAmt × RATE in chips
-const cashMax = () => Math.max(0, Math.min(wallet.left(), Math.floor(balance / RATE)));
-function renderCashOut() {
-  const max = cashMax();
-  cashAmt = Math.max(Math.min(1, max), Math.min(cashAmt, max));
-  const limit = wallet.limit();
-  const left = wallet.left();
-  $('wmCasino').textContent = money(balance - cashAmt * RATE);
-  $('wmWallet').textContent = money(wallet.cash() + cashAmt);
-  $('wmRate').innerHTML = `💱 <b>${money(RATE)}</b> in chips = <b>$1</b> in your wallet`;
-  $('wmLeft').textContent = `${money(left)} of ${money(limit)} left today`;
-  $('wmBar').style.width = `${((limit - left) / limit) * 100}%`;
-  const range = $('wmRange');
-  range.max = max;
-  range.value = cashAmt;
-  range.disabled = !max;
-  $('wmGo').disabled = !max;
-  $('wmGo').textContent = max ? `Swap ${money(cashAmt * RATE)} in chips for ${money(cashAmt)}` : 'Nothing to cash out';
-  const lvl = levels.level();
-  $('wmFoot').textContent =
-    !left ? `That's today's limit. It resets at midnight, and level ${lvl + 1} raises it to ${money(dailyLimit(lvl + 1))}.` :
-    balance < RATE ? `You need at least ${money(RATE)} in chips to get $1. Win some first (or, you know, the fake card).` :
-    `Resets at midnight. Level ${lvl + 1} raises it to ${money(dailyLimit(lvl + 1))} a day.`;
-}
-function openCashOut() {
-  renderCashOut();
-  $('walletModal').showModal();
-  sound.blip(880, 0.05, 'triangle', 0.08);
-}
-$('walletBtn').addEventListener('click', openCashOut);
-$('closeWallet').addEventListener('click', () => $('walletModal').close());
-$('walletModal').addEventListener('click', (e) => e.target === $('walletModal') && $('walletModal').close());
-$('wmRange').addEventListener('input', (e) => {
-  cashAmt = +e.target.value;
-  renderCashOut();
+// ---------- 🏦 JackpotBank, on your phone: cash out chips to your wallet, add (fake) funds ----------
+const bank = createBank({
+  sound,
+  toast,
+  wallet,
+  levels,
+  phone: () => phone,
+  getBalance: () => balance,
+  onTable: totalBets,
+  pending: () => pendingCash,
+  deposit,
+  reset: resetBalance,
+  startBalance: START_BALANCE,
+  // chips → wallet money, up to today's limit: the bills fly into the wallet card
+  cashOut(want, toEl) {
+    const n = wallet.withdraw(Math.min(want, Math.floor(balance / RATE)));
+    if (!n) return 0;
+    balance -= n * RATE;
+    pendingCash += n;
+    render();
+    sound.cash();
+    emit('cashout', { amount: n });
+    const to = toEl || $('walletBtn');
+    flair.cashOut({
+      fromEl: $('balance'),
+      toEl: to,
+      amount: n * RATE,
+      onDone: () => {
+        pendingCash -= n;
+        renderProgress();
+        refreshApps();
+        sound.chip();
+        to.animate([{ scale: 1 }, { scale: 1.08 }, { scale: 1 }], { duration: 350, easing: 'ease-out' });
+      },
+    });
+    toast(`👛 ${money(n * RATE)} in chips swapped for ${money(n)} in your wallet. The store is open.`);
+    return n;
+  },
 });
-document.querySelectorAll('.wm-chips [data-amt]').forEach((b) =>
-  b.addEventListener('click', () => {
-    cashAmt = b.dataset.amt === 'max' ? cashMax() : +b.dataset.amt;
-    renderCashOut();
-    sound.blip(1200, 0.04, 'triangle', 0.07);
-  })
-);
-$('wmGo').addEventListener('click', () => {
-  const n = wallet.withdraw(Math.min(cashAmt, Math.floor(balance / RATE)));
-  if (!n) return;
-  balance -= n * RATE;
-  pendingCash += n;
-  render();
-  $('walletModal').close();
-  sound.cash();
-  emit('cashout', { amount: n });
-  const toEl = settings.walletEl() || $('walletBtn');
-  flair.cashOut({
-    fromEl: $('balance'),
-    toEl,
-    amount: n * RATE,
-    onDone: () => {
-      pendingCash -= n;
-      renderProgress();
-      settings.refresh();
-      sound.chip();
-      toEl.animate([{ scale: 1 }, { scale: 1.25 }, { scale: 1 }], { duration: 350, easing: 'ease-out' });
-    },
-  });
-  toast(`👛 ${money(n * RATE)} in chips swapped for ${money(n)} in your wallet. The store is open.`);
-});
+// you're broke: the Bank app gets a badge, and the phone button a nudge
+function nudgeBank() {
+  bank.nudge();
+  const b = $('phoneBtn');
+  b.classList.remove('pulse');
+  void b.offsetWidth;
+  b.classList.add('pulse');
+}
+$('walletBtn').addEventListener('click', () => phone.open('bank'));
+$('lvlChip').addEventListener('click', () => phone.open('goals'));
 
 // every bet: a little +XP by your level
 function gainedXp(xp) {
@@ -1576,9 +1279,9 @@ function levelledUp(l) {
     toast(
       `⭐ Level ${l}! You can cash out ${money(dailyLimit(l))} a day now.` +
         (unlocked.length ? ` Unlocked: ${names}${unlocked.length > 3 ? ` +${unlocked.length - 3} more` : ''}.` : '') +
-        (perk ? ` New perk: ${perk.emoji} ${perk.name} (⚙️ → 🏆 Goals).` : '')
+        (perk ? ` New perk: ${perk.emoji} ${perk.name} (📱 → 🏆 Goals).` : '')
     );
-    settings.refresh();
+    refreshApps();
     applyPerks();
   }, 1200);
 }
@@ -1604,7 +1307,7 @@ phone = createPhone({
   resume3d: () => resume3dRooms(),
   canOpen: () =>
     !spinning && !fxActive() && !document.querySelector('dialog[open]') &&
-    !['vip-party-on', 'bonus-active', 'kitchen-on', 'hangover-on', 'settings-on'].some((c) => document.body.classList.contains(c)),
+    !['vip-party-on', 'bonus-active', 'kitchen-on', 'hangover-on'].some((c) => document.body.classList.contains(c)),
   roomVisible: () => !slots?.isOpen() && !blackjack?.isOpen(),
   bannersOn: () => prefs.banners,
 });
@@ -1624,7 +1327,7 @@ createVip({
     balance -= v;
     render();
   },
-  onBroke: () => $('addFundsBtn').classList.add('pulse'),
+  onBroke: () => nudgeBank(),
   onBuy: (price, bottle) => {
     levels.drink(price, bottle);
     emit('drink', { price, bottle });
@@ -1676,18 +1379,45 @@ blackjack = createBlackjack({
     if (balance < 1) emit('broke');
   },
 });
-$('toBlackjackBtn').addEventListener('click', () => {
-  if (spinning) return toast('Hold on, the ball is still rolling! 🎡');
-  if (bets.size) return toast('Take your chips off the roulette table first. 🃏');
-  scrollTo({ top: 0, behavior: 'smooth' });
-  blackjack.open();
-});
 
-$('toSlotsBtn').addEventListener('click', () => {
-  if (spinning) return toast('Hold on, the ball is still rolling! 🎡');
-  scrollTo({ top: 0, behavior: 'smooth' });
-  slots.show();
-});
+// ---------- 🗺️ getting around: the Map on your phone ----------
+// You walk there on the map, so the room itself just whooshes past while the phone drops away.
+function travelTo(id) {
+  phone.close();
+  if (blackjack.isOpen()) blackjack.close();
+  if (id === 'blackjack') {
+    slots.hide({ quick: true });
+    scrollTo({ top: 0, behavior: 'smooth' });
+    blackjack.open();
+  } else if (id === 'slots') {
+    scrollTo({ top: 0, behavior: 'smooth' });
+    slots.show({ quick: true });
+  } else if (id === 'roulette') slots.hide({ quick: true });
+}
+
+// every app on the phone (the grid, in order; dock apps sit along the bottom)
+[
+  settings.app('style'),
+  settings.app('store'),
+  settings.app('goals'),
+  createRoadmap({ store, sound }),
+  createMap({
+    sound,
+    toast,
+    here: () => (blackjack.isOpen() ? 'blackjack' : slots.isOpen() ? 'slots' : 'roulette'),
+    go: travelTo,
+    blocked: (id) =>
+      blackjack.busy() ? '🃏 Finish your hand first!' :
+      slots.busy() ? '🐉 Let the reels finish first!' :
+      id === 'blackjack' && spinning ? 'Hold on, the ball is still rolling! 🎡' :
+      id === 'blackjack' && bets.size ? 'Take your chips off the roulette table first. 🃏' :
+      '',
+    look: () => settings.look(),
+    daveMet: () => dave.met(),
+  }),
+  bank.app,
+  settings.app('settings'),
+].forEach((app) => phone.add(app));
 
 // ---------- 📺 watch an ad for $100 (broke players only) ----------
 const canWatchAd = () => balance === 0 && !bets.size && !spinning;

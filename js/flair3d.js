@@ -250,6 +250,22 @@ function rubberStamp() {
   return g;
 }
 
+// a burst throws dozens of the same thing: build each shape once and share its geometry,
+// giving every copy its own materials so it can still fade out on its own
+const templates = {};
+function copyOf(make) {
+  const t = (templates[make.name] ||= make());
+  t.userData.shared = true;
+  const o = t.clone();
+  o.traverse((m) => {
+    if (!m.material) return;
+    m.material = m.material.clone();
+    m.material.transparent = true;
+  });
+  return o;
+}
+const HEART_COLORS = [0xff2d6a, 0xff5fa2, 0xe0142c];
+
 const ease = (t) => 1 - Math.pow(1 - Math.min(1, Math.max(0, t)), 3);
 const lerp = (a, b, t) => a + (b - a) * t;
 
@@ -336,7 +352,9 @@ export function createFlair() {
       for (let i = 0; i < n; i++) {
         const a = rand(Math.PI * 0.15, Math.PI * 0.85);
         const sp = rand(380, 820);
-        spawn(make(), x, y, new THREE.Vector3(Math.cos(a) * sp * (Math.random() < 0.5 ? -1 : 1), Math.sin(a) * sp, 0), rand(14, 24), rand(2.2, 3.2));
+        const mesh = copyOf(make);
+        if (make === heart) mesh.material.color.setHex(HEART_COLORS[(Math.random() * 3) | 0]);
+        spawn(mesh, x, y, new THREE.Vector3(Math.cos(a) * sp * (Math.random() < 0.5 ? -1 : 1), Math.sin(a) * sp, 0), rand(14, 24), rand(2.2, 3.2));
       }
     }
     run();
@@ -587,8 +605,9 @@ export function createFlair() {
       });
       if (b.life <= 0 || b.mesh.position.y < -innerHeight - 200) {
         scene.remove(b.mesh);
+        const shared = b.mesh.userData.shared;
         b.mesh.traverse((o) => {
-          o.geometry?.dispose();
+          if (!shared) o.geometry?.dispose();
           if (o.material && o.material.map !== billTex) o.material.dispose();
         });
         bits.splice(i, 1);
@@ -619,6 +638,11 @@ export function createFlair() {
       renderer.clear();
     }
   }
+
+  // setting up WebGL + the environment map stalls for a moment: do it while the page is idle,
+  // not on the first win / level-up
+  const idle = window.requestIdleCallback || ((fn) => setTimeout(fn, 3000));
+  idle(() => ensure(), { timeout: 8000 });
 
   return { burst, cashOut, levelUp, trophy, stampCard };
 }

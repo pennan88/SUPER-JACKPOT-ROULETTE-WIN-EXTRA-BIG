@@ -26,6 +26,19 @@ export const SYMBOL_INFO = {
   ingot: { name: 'GOLD INGOTS', color: '#ffc93a' },
   dragon: { name: 'DRAGONS', color: '#ff2d55' },
   pearl: { name: 'FLAMING PEARLS', color: '#ffd6ec' },
+  // ✨ special markers
+  envelope: { name: 'RED ENVELOPE', color: '#ff3b2f' },
+  cookie: { name: 'FORTUNE COOKIE', color: '#f2c14e' },
+  gong: { name: 'TEMPLE GONG', color: '#ffd23f' },
+  firecracker: { name: 'FIRECRACKER', color: '#ff5a1f' },
+  egg: { name: 'DRAGON EGG', color: '#ffb020' },
+  egg1: { name: 'CRACKED EGG', color: '#ffb020' },
+  wild: { name: 'BABY DRAGON WILD', color: '#3dff8a' },
+  kite: { name: 'KITE', color: '#3dafff' },
+  cat: { name: 'LUCKY CAT', color: '#ffd23f' },
+  moon: { name: 'FULL MOON', color: '#ffe6a0' },
+  panda: { name: 'LAZY PANDA', color: '#ffffff' },
+  taxman: { name: 'DRAGON TAX INSPECTOR', color: '#5ee08f' },
 };
 
 function canvas(w, h) {
@@ -78,6 +91,7 @@ const glowTexture = (inner, outer = 'rgba(0,0,0,0)', size = 128) => {
 function buildSymbols(clip) {
   const phys = (o) => new THREE.MeshPhysicalMaterial({ clippingPlanes: clip, envMapIntensity: 1.4, ...o });
   const gold = phys({ color: 0xffc53a, metalness: 1, roughness: 0.2, clearcoat: 0.6 });
+  const label = makeLabel(clip);
   const T = {};
   const group = (...parts) => {
     const g = new THREE.Group();
@@ -192,32 +206,444 @@ function buildSymbols(clip) {
     fg.fillStyle = fl;
     fg.fillRect(0, 0, 128, 128);
     const flame = new THREE.MeshBasicMaterial({ map: tex(fc), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, clippingPlanes: clip });
-    const [lc, lg] = canvas(256, 64);
-    const label = new THREE.MeshBasicMaterial({ map: tex(lc), transparent: true, depthWrite: false, clippingPlanes: clip });
-    const drawLabel = () => {
-      lg.clearRect(0, 0, 256, 64);
-      lg.font = '900 40px Cinzel, Georgia, serif';
-      lg.textAlign = 'center';
-      lg.textBaseline = 'middle';
-      lg.lineWidth = 9;
-      lg.strokeStyle = '#5a0510';
-      lg.strokeText('SCATTER', 128, 34);
-      const tg = lg.createLinearGradient(0, 12, 0, 56);
-      tg.addColorStop(0, '#fff6c0');
-      tg.addColorStop(1, '#ffb020');
-      lg.fillStyle = tg;
-      lg.fillText('SCATTER', 128, 34);
-      label.map.needsUpdate = true;
-    };
-    drawLabel();
-    document.fonts?.ready.then(drawLabel);
     T.pearl = group(
       [new THREE.PlaneGeometry(1.1, 1.25), flame, (m) => ((m.position.set(0, 0.08, -0.25)), (m.name = 'flame'))],
       [pearl, mat],
-      [new THREE.PlaneGeometry(0.95, 0.24), label, (m) => m.position.set(0, -0.36, 0.34)],
+      label('SCATTER'),
     );
   }
+  buildMarkers(T, { clip, phys, gold, group, label });
   return T;
+}
+
+// the little tag under a special symbol (SCATTER, WILD, BOOM…)
+const LABEL_GEO = new THREE.PlaneGeometry(0.95, 0.24);
+function makeLabel(clip) {
+  return (text, { top = '#fff6c0', bottom = '#ffb020', stroke = '#5a0510', y = -0.36 } = {}) => {
+    const [lc, lg] = canvas(256, 64);
+    const mat = new THREE.MeshBasicMaterial({ map: tex(lc), transparent: true, depthWrite: false, clippingPlanes: clip });
+    const draw = () => {
+      lg.clearRect(0, 0, 256, 64);
+      lg.font = '900 40px Cinzel, Georgia, serif';
+      const size = Math.min(40, (40 * 226) / lg.measureText(text).width);
+      lg.font = `900 ${size}px Cinzel, Georgia, serif`;
+      lg.textAlign = 'center';
+      lg.textBaseline = 'middle';
+      lg.lineWidth = 9;
+      lg.strokeStyle = stroke;
+      lg.strokeText(text, 128, 34);
+      const tg = lg.createLinearGradient(0, 12, 0, 56);
+      tg.addColorStop(0, top);
+      tg.addColorStop(1, bottom);
+      lg.fillStyle = tg;
+      lg.fillText(text, 128, 34);
+      mat.map.needsUpdate = true;
+    };
+    draw();
+    document.fonts?.ready.then(draw);
+    return [LABEL_GEO, mat, (m) => m.position.set(0, y, 0.34)];
+  };
+}
+
+// ---------------------------------------------------------------- ✨ special markers
+function buildMarkers(T, { clip, phys, gold, group, label }) {
+  const std = (o) => new THREE.MeshStandardMaterial({ clippingPlanes: clip, ...o });
+  const faceTex = (w, h, draw) => {
+    const [c, g] = canvas(w, h);
+    draw(g, w, h);
+    return tex(c);
+  };
+  const glowMat = (inner) => new THREE.MeshBasicMaterial({ map: glowTexture(inner), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, clippingPlanes: clip, toneMapped: false });
+  const black = std({ color: 0x141414, roughness: 0.5 });
+  const white = phys({ color: 0xfaf6f0, roughness: 0.35, clearcoat: 0.6 });
+
+  // 🧧 red envelope with a gold 福
+  {
+    const red = phys({ color: 0xe0141f, roughness: 0.3, clearcoat: 0.8, emissive: 0x6a0008, emissiveIntensity: 0.6 });
+    const front = std({
+      map: faceTex(160, 200, (g, w, h) => {
+        g.fillStyle = '#d4101c';
+        g.fillRect(0, 0, w, h);
+        g.strokeStyle = '#ffd24a';
+        g.lineWidth = 8;
+        g.strokeRect(8, 8, w - 16, h - 16);
+        g.beginPath();
+        g.moveTo(8, 12);
+        g.lineTo(w / 2, 78);
+        g.lineTo(w - 8, 12);
+        g.lineWidth = 6;
+        g.stroke();
+        g.fillStyle = '#ffd24a';
+        g.beginPath();
+        g.arc(w / 2, 122, 40, 0, Math.PI * 2);
+        g.fill();
+        g.fillStyle = '#b00a14';
+        g.font = '900 54px "Microsoft YaHei","PingFang SC","Noto Sans CJK SC",serif';
+        g.textAlign = 'center';
+        g.textBaseline = 'middle';
+        g.fillText('福', w / 2, 126);
+      }),
+      roughness: 0.4,
+      emissive: 0xffffff,
+      emissiveIntensity: 0.25,
+    });
+    front.emissiveMap = front.map;
+    T.envelope = group([new THREE.BoxGeometry(0.62, 0.78, 0.08), red], [new THREE.PlaneGeometry(0.6, 0.76), front, (m) => (m.position.z = 0.042)], label('+SPINS', { y: -0.44 }));
+  }
+
+  // 🥠 fortune cookie: a folded crescent with the fortune poking out
+  {
+    const dough = phys({ color: 0xc9731f, roughness: 0.45, clearcoat: 0.4, emissive: 0x4a1a00, emissiveIntensity: 0.45, envMapIntensity: 0.8 });
+    const shell = new THREE.TorusGeometry(0.2, 0.15, 18, 36, Math.PI * 1.15);
+    shell.rotateZ(-Math.PI * 0.075);
+    shell.scale(1.2, 1, 0.9);
+    const paper = std({
+      map: faceTex(256, 48, (g, w, h) => {
+        g.fillStyle = '#fffdf6';
+        g.fillRect(0, 0, w, h);
+        g.fillStyle = '#c0182a';
+        g.font = 'bold 28px Georgia, serif';
+        g.textAlign = 'center';
+        g.textBaseline = 'middle';
+        g.fillText('✦ LUCK ✦', w / 2, h / 2 + 2);
+      }),
+      roughness: 0.8,
+      side: THREE.DoubleSide,
+      emissive: 0xffffff,
+      emissiveIntensity: 0.2,
+    });
+    paper.emissiveMap = paper.map;
+    T.cookie = group(
+      [shell, dough, (m) => (m.position.y = -0.12)],
+      [new THREE.PlaneGeometry(0.52, 0.1), paper, (m) => (m.position.set(0.08, -0.14, 0.17), (m.rotation.z = -0.25))],
+      label('FORTUNE'),
+    );
+  }
+
+  // 🔔 temple gong on a little red frame (the disc swings when it rings)
+  {
+    const red = phys({ color: 0xb3121f, roughness: 0.35, clearcoat: 0.9 });
+    const disc = new THREE.CylinderGeometry(0.27, 0.27, 0.05, 40);
+    disc.rotateX(Math.PI / 2);
+    const bright = phys({ color: 0xffc53a, metalness: 1, roughness: 0.16, clearcoat: 1, emissive: 0x4a2a00, emissiveIntensity: 0.5 });
+    const g = group(
+      [new THREE.CylinderGeometry(0.035, 0.035, 0.8, 10), red, (m) => m.position.set(-0.36, 0, -0.05)],
+      [new THREE.CylinderGeometry(0.035, 0.035, 0.8, 10), red, (m) => m.position.set(0.36, 0, -0.05)],
+      [new THREE.BoxGeometry(0.86, 0.07, 0.08), red, (m) => m.position.set(0, 0.37, -0.05)],
+      label('RESPIN', { top: '#fff', bottom: '#ffd23f' }),
+    );
+    const swing = group([disc, bright], [new THREE.SphereGeometry(0.08, 16, 10), gold, (m) => (m.position.z = 0.03)], [new THREE.TorusGeometry(0.2, 0.012, 6, 36), gold, (m) => (m.position.z = 0.03)]);
+    swing.name = 'swing';
+    swing.position.y = 0.04;
+    g.add(swing);
+    T.gong = g;
+  }
+
+  // 🧨 firecracker with a fizzing fuse
+  {
+    const red = phys({ color: 0xff1f2a, roughness: 0.25, clearcoat: 1, emissive: 0x800008, emissiveIntensity: 0.7 });
+    const body = new THREE.CylinderGeometry(0.15, 0.15, 0.58, 24);
+    const band = new THREE.TorusGeometry(0.152, 0.02, 8, 24);
+    band.rotateX(Math.PI / 2);
+    const fuse = new THREE.CylinderGeometry(0.018, 0.018, 0.2, 8);
+    const stick = group(
+      [body, red],
+      [band, gold, (m) => (m.position.y = 0.22)],
+      [band, gold, (m) => (m.position.y = -0.22)],
+      [new THREE.CylinderGeometry(0.1, 0.12, 0.05, 20), gold, (m) => (m.position.y = 0.31)],
+      [fuse, std({ color: 0xd9c08a, roughness: 0.9 }), (m) => (m.position.set(0.03, 0.42, 0), (m.rotation.z = -0.3))],
+      [new THREE.PlaneGeometry(0.34, 0.34), glowMat('rgba(255,230,120,1)'), (m) => (m.position.set(0.07, 0.53, 0.05), (m.name = 'spark'))],
+    );
+    stick.rotation.z = -0.3;
+    stick.position.y = 0.02;
+    const g = group(label('BOOM', { top: '#fff', bottom: '#ff5a1f' }));
+    g.add(stick);
+    T.firecracker = g;
+  }
+
+  // 🥚 dragon egg: red-gold scales; once cracked, the cracks glow from inside
+  {
+    const pts = [];
+    for (let i = 0; i <= 20; i++) {
+      const t = -Math.PI / 2 + (i / 20) * Math.PI;
+      pts.push(new THREE.Vector2(Math.max(0.001, 0.27 * Math.cos(t) * (1 - 0.14 * Math.sin(t))), 0.37 * Math.sin(t)));
+    }
+    const shape = new THREE.LatheGeometry(pts, 32);
+    const scales = (g, w, h) => {
+      const gr = g.createLinearGradient(0, 0, 0, h);
+      gr.addColorStop(0, '#ffb347');
+      gr.addColorStop(0.5, '#d0302a');
+      gr.addColorStop(1, '#6a0a1a');
+      g.fillStyle = gr;
+      g.fillRect(0, 0, w, h);
+      g.strokeStyle = 'rgba(255,215,90,0.75)';
+      g.lineWidth = 3;
+      for (let y = 8; y < h; y += 22)
+        for (let x = (y / 22) % 2 ? 0 : 16; x < w + 32; x += 32) {
+          g.beginPath();
+          g.arc(x, y, 14, 0.1 * Math.PI, 0.9 * Math.PI);
+          g.stroke();
+        }
+    };
+    // zigzag cracks all the way round (the lathe's texture seam faces the camera)
+    const cracks = (g) => {
+      g.strokeStyle = '#fff4b0';
+      g.lineWidth = 9;
+      g.lineJoin = 'round';
+      g.shadowColor = '#ff8a00';
+      g.shadowBlur = 12;
+      for (let x0 = 0; x0 <= 512; x0 += 64) {
+        g.beginPath();
+        let x = x0;
+        g.moveTo(x, 70);
+        for (let y = 88; y <= 190; y += 18) g.lineTo((x += (y / 18) % 2 ? 16 : -16), y);
+        g.stroke();
+      }
+    };
+    const egg = (cracked) => {
+      const map = faceTex(512, 256, (g, w, h) => {
+        scales(g, w, h);
+        if (cracked) cracks(g, w, h);
+      });
+      const glow = faceTex(512, 256, (g, w, h) => {
+        g.fillStyle = '#000';
+        g.fillRect(0, 0, w, h);
+        if (cracked) cracks(g, w, h);
+      });
+      const mat = phys({ map, roughness: 0.3, clearcoat: 1, emissive: 0xffffff, emissiveMap: glow, emissiveIntensity: cracked ? 2.4 : 0 });
+      return group([shape, mat, (m) => (m.position.y = 0.02)], label(cracked ? 'CRACK!' : 'EGG', { top: '#fff4c0', bottom: '#ff8a00' }));
+    };
+    T.egg = egg(false);
+    T.egg1 = egg(true);
+  }
+
+  // 🐉 baby dragon WILD: a rainbow-rimmed medallion
+  {
+    const face = std({
+      map: faceTex(256, 256, (g) => {
+        const gr = g.createRadialGradient(128, 110, 10, 128, 128, 128);
+        gr.addColorStop(0, '#7dffb0');
+        gr.addColorStop(0.65, '#12a060');
+        gr.addColorStop(1, '#063a26');
+        g.fillStyle = gr;
+        g.fillRect(0, 0, 256, 256);
+        g.font = `160px ${EMOJI}`;
+        g.textAlign = 'center';
+        g.textBaseline = 'middle';
+        g.fillText('🐉', 128, 132);
+      }),
+      roughness: 0.35,
+      emissive: 0xffffff,
+      emissiveIntensity: 0.35,
+    });
+    face.emissiveMap = face.map;
+    const rim = phys({ color: 0xffffff, metalness: 0.6, roughness: 0.15, iridescence: 1, iridescenceIOR: 1.8, clearcoat: 1, emissive: 0xff4fd8, emissiveIntensity: 0.35 });
+    T.wild = group(
+      [new THREE.PlaneGeometry(1.25, 1.25), glowMat('rgba(120,255,190,0.9)'), (m) => ((m.position.z = -0.15), (m.name = 'flame'))],
+      [new THREE.CircleGeometry(0.39, 48), face, (m) => (m.position.z = 0.06)],
+      [new THREE.CylinderGeometry(0.41, 0.41, 0.12, 48, 1, true).rotateX(Math.PI / 2), gold],
+      [new THREE.TorusGeometry(0.4, 0.05, 12, 60), rim, (m) => (m.position.z = 0.06)],
+      label('WILD', { top: '#f0fff4', bottom: '#3dff8a', stroke: '#033319' }),
+    );
+  }
+
+  // 🪁 kite: four coloured panes, cross spars and a bow tail that wiggles
+  {
+    const pane = (a, b, color) => {
+      const s = new THREE.Shape();
+      s.moveTo(0, 0);
+      s.lineTo(...a);
+      s.lineTo(...b);
+      s.closePath();
+      return [new THREE.ShapeGeometry(s), phys({ color, roughness: 0.4, clearcoat: 0.6, side: THREE.DoubleSide, emissive: color, emissiveIntensity: 0.25 })];
+    };
+    const T_ = [0, 0.4];
+    const R = [0.3, 0.08];
+    const B = [0, -0.34];
+    const L = [-0.3, 0.08];
+    const spar = std({ color: 0x6a3a14, roughness: 0.7 });
+    const tail = group(
+      ...[0, 1, 2].map((i) => [new THREE.ConeGeometry(0.05, 0.1, 8).rotateZ(Math.PI / 2), phys({ color: [0xffd23f, 0xff3d6a, 0x3dafff][i], roughness: 0.4 }), (m) => m.position.set(0.02 + i * 0.05, -0.1 - i * 0.12, 0)]),
+      ...[0, 1, 2].map((i) => [new THREE.ConeGeometry(0.05, 0.1, 8).rotateZ(-Math.PI / 2), phys({ color: [0xffd23f, 0xff3d6a, 0x3dafff][i], roughness: 0.4 }), (m) => m.position.set(-0.08 + i * 0.05, -0.1 - i * 0.12, 0)]),
+    );
+    tail.name = 'tail';
+    tail.position.y = -0.34;
+    const g = group(
+      [...pane(T_, R, 0xff3d3d), () => {}],
+      [...pane(R, B, 0xffd23f), () => {}],
+      [...pane(B, L, 0x3dafff), () => {}],
+      [...pane(L, T_, 0x3ddf7a), () => {}],
+      [new THREE.CylinderGeometry(0.012, 0.012, 0.74, 6), spar, (m) => m.position.set(0, 0.03, 0.01)],
+      [new THREE.CylinderGeometry(0.012, 0.012, 0.6, 6).rotateZ(Math.PI / 2), spar, (m) => m.position.set(0, 0.08, 0.01)],
+    );
+    g.add(tail);
+    const out = group(label('KITE', { top: '#e8f6ff', bottom: '#3dafff', stroke: '#0a2a5a' }));
+    g.position.y = 0.06;
+    g.rotation.z = 0.12;
+    out.add(g);
+    T.kite = out;
+  }
+
+  // 🐱 lucky cat, waving (the paw is a pivot so it can wave harder when it's its turn)
+  {
+    const face = std({
+      map: faceTex(128, 128, (g) => {
+        g.clearRect(0, 0, 128, 128);
+        g.strokeStyle = '#1a1a1a';
+        g.lineWidth = 6;
+        g.lineCap = 'round';
+        for (const x of [40, 88]) {
+          g.beginPath();
+          g.arc(x, 56, 11, Math.PI * 1.1, Math.PI * 1.9);
+          g.stroke();
+        }
+        g.fillStyle = '#ff7aa2';
+        g.beginPath();
+        g.arc(64, 72, 6, 0, Math.PI * 2);
+        g.fill();
+        g.lineWidth = 3;
+        for (const s of [-1, 1])
+          for (const dy of [-5, 5]) {
+            g.beginPath();
+            g.moveTo(64 + s * 20, 76 + dy * 0.4);
+            g.lineTo(64 + s * 50, 72 + dy);
+            g.stroke();
+          }
+      }),
+      transparent: true,
+      roughness: 0.6,
+    });
+    const pink = std({ color: 0xff8ab0, roughness: 0.5 });
+    const collar = phys({ color: 0xe0141f, roughness: 0.3, clearcoat: 1 });
+    const ear = new THREE.ConeGeometry(0.075, 0.13, 12);
+    const paw = group([new THREE.CylinderGeometry(0.06, 0.07, 0.24, 14), white, (m) => (m.position.y = 0.12)], [new THREE.SphereGeometry(0.075, 14, 10), white, (m) => (m.position.y = 0.25)]);
+    paw.name = 'paw';
+    paw.position.set(0.2, 0.02, 0.1);
+    const g = group(
+      [new THREE.SphereGeometry(0.24, 24, 18).scale(1, 1.05, 0.85), white, (m) => (m.position.y = -0.14)],
+      [new THREE.SphereGeometry(0.2, 24, 18).scale(1.1, 0.95, 0.9), white, (m) => (m.position.y = 0.17)],
+      [ear, white, (m) => (m.position.set(-0.12, 0.33, 0), (m.rotation.z = 0.35))],
+      [ear, white, (m) => (m.position.set(0.12, 0.33, 0), (m.rotation.z = -0.35))],
+      [new THREE.PlaneGeometry(0.3, 0.3), face, (m) => m.position.set(0, 0.15, 0.205)],
+      [new THREE.TorusGeometry(0.16, 0.025, 8, 28).rotateX(Math.PI / 2), collar, (m) => (m.position.y = 0.01)],
+      [new THREE.SphereGeometry(0.045, 14, 10), gold, (m) => m.position.set(0, -0.03, 0.17)],
+      [new THREE.CylinderGeometry(0.12, 0.12, 0.03, 28).rotateX(Math.PI / 2), gold, (m) => m.position.set(-0.07, -0.16, 0.2)],
+      [new THREE.SphereGeometry(0.03, 8, 6), pink, (m) => m.position.set(0.12, 0.3, 0.05)],
+      label('LUCKY', { top: '#fff', bottom: '#ffd23f' }),
+    );
+    g.add(paw);
+    T.cat = g;
+  }
+
+  // 🌕 full moon with a soft halo
+  {
+    // a warm harvest moon (a pale one looked just like the pearl)
+    const map = faceTex(256, 128, (g, w, h) => {
+      const base = g.createLinearGradient(0, 0, 0, h);
+      base.addColorStop(0, '#ffe79a');
+      base.addColorStop(1, '#f5b440');
+      g.fillStyle = base;
+      g.fillRect(0, 0, w, h);
+      for (let i = 0; i < 30; i++) {
+        const x = Math.random() * w;
+        const y = 16 + Math.random() * (h - 32);
+        const r = 5 + Math.random() * 13;
+        const gr = g.createRadialGradient(x, y, 0, x, y, r);
+        gr.addColorStop(0, 'rgba(170,90,20,0.7)');
+        gr.addColorStop(0.7, 'rgba(170,90,20,0.35)');
+        gr.addColorStop(1, 'rgba(170,90,20,0)');
+        g.fillStyle = gr;
+        g.fillRect(x - r, y - r, r * 2, r * 2);
+      }
+    });
+    const moon = phys({ map, roughness: 0.85, emissive: 0xffc860, emissiveMap: map, emissiveIntensity: 0.55, envMapIntensity: 0.6 });
+    T.moon = group(
+      [new THREE.PlaneGeometry(1.4, 1.4), glowMat('rgba(255,200,90,0.95)'), (m) => ((m.position.z = -0.3), (m.name = 'flame'))],
+      [new THREE.SphereGeometry(0.33, 36, 24), moon],
+      label('MOON', { top: '#fffbe6', bottom: '#ffd98a', stroke: '#3a2a00' }),
+    );
+  }
+
+  // 🐼 sleepy panda head, Zzz floating off it
+  {
+    const patch = new THREE.SphereGeometry(1, 14, 10);
+    const zzz = new THREE.MeshBasicMaterial({
+      map: faceTex(128, 64, (g) => {
+        g.font = '900 44px Georgia, serif';
+        g.fillStyle = '#ffffff';
+        g.strokeStyle = '#1a2a5a';
+        g.lineWidth = 6;
+        g.strokeText('Zz', 30, 48);
+        g.fillText('Zz', 30, 48);
+      }),
+      transparent: true,
+      depthWrite: false,
+      clippingPlanes: clip,
+    });
+    T.panda = group(
+      [new THREE.SphereGeometry(0.3, 28, 20).scale(1.05, 0.92, 0.9), white],
+      [new THREE.SphereGeometry(0.1, 14, 10), black, (m) => m.position.set(-0.23, 0.23, -0.02)],
+      [new THREE.SphereGeometry(0.1, 14, 10), black, (m) => m.position.set(0.23, 0.23, -0.02)],
+      [patch, black, (m) => (m.position.set(-0.11, 0.02, 0.23), m.scale.set(0.085, 0.06, 0.04), (m.rotation.z = -0.5))],
+      [patch, black, (m) => (m.position.set(0.11, 0.02, 0.23), m.scale.set(0.085, 0.06, 0.04), (m.rotation.z = 0.5))],
+      [new THREE.SphereGeometry(0.04, 12, 8).scale(1.3, 0.8, 1), black, (m) => m.position.set(0, -0.07, 0.27)],
+      [new THREE.PlaneGeometry(0.34, 0.17), zzz, (m) => (m.position.set(0.24, 0.34, 0.2), (m.name = 'zzz'))],
+      label('ZZZ', { top: '#ffffff', bottom: '#b8c8e8', stroke: '#1a2a5a' }),
+    );
+  }
+
+  // 🧾 the tax man: a curled receipt in a bowler hat
+  {
+    const paperGeo = new THREE.PlaneGeometry(0.5, 0.72, 1, 10);
+    const p = paperGeo.attributes.position;
+    for (let i = 0; i < p.count; i++) p.setZ(i, 0.06 * Math.cos((p.getY(i) / 0.72) * Math.PI * 1.4));
+    paperGeo.computeVertexNormals();
+    const paper = std({
+      map: faceTex(160, 232, (g, w, h) => {
+        g.fillStyle = '#fbfaf4';
+        g.beginPath();
+        g.moveTo(0, 0);
+        g.lineTo(w, 0);
+        for (let x = w; x >= 0; x -= 16) g.lineTo(x, h - (x / 16) % 2 * 10);
+        g.closePath();
+        g.fill();
+        g.fillStyle = '#333';
+        g.textAlign = 'center';
+        g.font = 'bold 17px monospace';
+        g.fillText('DRAGON TAX', w / 2, 28);
+        g.fillRect(14, 38, w - 28, 2);
+        g.font = '12px monospace';
+        g.textAlign = 'left';
+        ['WIN ....... $$$', 'TAX ....... 10%', 'FEE ....... YES', 'SMILE ..... NO'].forEach((t, i) => g.fillText(t, 16, 60 + i * 20));
+        g.save();
+        g.translate(w / 2, 168);
+        g.rotate(-0.25);
+        g.strokeStyle = '#d0142a';
+        g.fillStyle = '#d0142a';
+        g.lineWidth = 4;
+        g.strokeRect(-46, -18, 92, 36);
+        g.font = 'bold 26px Georgia, serif';
+        g.textAlign = 'center';
+        g.textBaseline = 'middle';
+        g.fillText('PAID', 0, 2);
+        g.restore();
+      }),
+      transparent: true,
+      alphaTest: 0.5,
+      roughness: 0.9,
+      side: THREE.DoubleSide,
+      emissive: 0xffffff,
+      emissiveIntensity: 0.15,
+    });
+    paper.emissiveMap = paper.map;
+    const hat = std({ color: 0x1a1a1a, roughness: 0.45, metalness: 0.2 });
+    T.taxman = group(
+      [paperGeo, paper, (m) => (m.rotation.z = 0.08)],
+      [new THREE.CylinderGeometry(0.2, 0.2, 0.02, 24), hat, (m) => (m.position.set(-0.1, 0.36, 0.04), (m.rotation.z = 0.3))],
+      [new THREE.SphereGeometry(0.13, 20, 12, 0, Math.PI * 2, 0, Math.PI / 2), hat, (m) => (m.position.set(-0.1, 0.37, 0.04), (m.rotation.z = 0.3))],
+      label('TAX', { top: '#e8ffe8', bottom: '#5ee08f', stroke: '#0a3a1a' }),
+    );
+  }
 }
 
 // ---------------------------------------------------------------- the machine
@@ -230,7 +656,11 @@ export class DragonRush3D {
     this.speed = 1;
 
     const renderer = (this.renderer = new THREE.WebGLRenderer({ antialias: true }));
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    // resolution drops a notch while frames are slow (huge wins) and comes back once it's calm
+    this.maxRatio = Math.min(window.devicePixelRatio, 2);
+    this.ratio = this.maxRatio;
+    this.perf = { t: 0, n: 0, best: Infinity, calm: 0 };
+    renderer.setPixelRatio(this.ratio);
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.05;
     renderer.localClippingEnabled = true;
@@ -475,8 +905,11 @@ export class DragonRush3D {
     this.dragonT = 0;
     this._m = new THREE.Matrix4();
     this._q = new THREE.Quaternion();
+    this._e = new THREE.Euler();
     this._v = new THREE.Vector3();
     this._s = new THREE.Vector3();
+    this._head = new THREE.Vector3();
+    this._ahead = new THREE.Vector3();
   }
 
   dragonAt(a, near, out) {
@@ -487,7 +920,6 @@ export class DragonRush3D {
   updateDragon(dt) {
     this.dragonT += dt * (0.2 + this.boost * 0.5 + this.mode * 0.1);
     const near = this.boost;
-    const up = new THREE.Vector3(0, 1, 0);
     for (let i = 0; i < this.dragonN; i++) {
       const a = this.dragonT - i * 0.042;
       this.dragonAt(a, near, this._v);
@@ -497,18 +929,18 @@ export class DragonRush3D {
       this.dragonBody.setMatrixAt(i, this._m);
       const sk = i % 2 === 0 && i > 2 ? r * 0.9 : 0;
       this._s.set(sk, sk, sk);
-      this._v.addScaledVector(up, r * 0.9);
+      this._v.y += r * 0.9;
       this._m.compose(this._v, this._q.identity(), this._s);
       this.dragonSpikes.setMatrixAt(i, this._m);
     }
     this.dragonBody.instanceMatrix.needsUpdate = true;
     this.dragonSpikes.instanceMatrix.needsUpdate = true;
-    const head = this.dragonAt(this.dragonT + 0.03, near, new THREE.Vector3());
-    const ahead = this.dragonAt(this.dragonT + 0.08, near, new THREE.Vector3());
+    const head = this.dragonAt(this.dragonT + 0.03, near, this._head);
+    const ahead = this.dragonAt(this.dragonT + 0.08, near, this._ahead);
     const k = 4.2;
-    this.dragonHead.position.copy(head).add(new THREE.Vector3(0, 0.4, 0.8));
+    this.dragonHead.position.set(head.x, head.y + 0.4, head.z + 0.8);
     this.dragonHead.scale.set(ahead.x > head.x ? -k : k, k, 1);
-    this.dragonGlow.position.copy(head).add(new THREE.Vector3(0, 0, 0.5));
+    this.dragonGlow.position.set(head.x, head.y, head.z + 0.5);
     this.dragonGlow.scale.setScalar(9 + this.mode * 4 + this.boost * 6);
     this.dragonBody.material.emissive.setRGB(0.25 + this.mode * 0.4 + this.boost * 0.6, 0.02 + this.mode * 0.15, 0);
   }
@@ -616,7 +1048,8 @@ export class DragonRush3D {
     qg.textBaseline = 'middle';
     qg.fillText('龍', 128, 136);
     const plaque = new THREE.Mesh(new THREE.PlaneGeometry(1.25, 1.25), new THREE.MeshStandardMaterial({ map: tex(qc), roughness: 0.4, metalness: 0.2, emissive: 0xffffff, emissiveMap: tex(qc), emissiveIntensity: 0.3 }));
-    plaque.position.set(0, roofY + 0.5, 0.28);
+    // just proud of the roof's front face (-1.4 + 1.6 depth + 0.08 bevel = 0.28), or the two z-fight and flicker
+    plaque.position.set(0, roofY + 0.5, 0.34);
     s.add(plaque);
 
     // base plinth
@@ -812,8 +1245,9 @@ export class DragonRush3D {
       glow.visible = false;
       return;
     }
+    // only the first map needs a shader rebuild; swapping one texture for another doesn't
+    if (!m.material.map) m.material.needsUpdate = true;
     m.material.map = this.spotTexture(v);
-    m.material.needsUpdate = true;
     m.material.opacity = 1;
     m.visible = true;
     glow.visible = v >= 2;
@@ -878,10 +1312,17 @@ export class DragonRush3D {
       return m;
     });
     this.flashNext = 0;
+    this.orbs = Array.from({ length: 24 }, () => {
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(0.7, 0.7), new THREE.MeshBasicMaterial({ map: this.flashTex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false }));
+      m.visible = false;
+      this.scene.add(m);
+      return m;
+    });
+    this.orbNext = 0;
   }
   burst(pos, color, n = 14, power = 1) {
-    const col = new THREE.Color(color);
-    const white = new THREE.Color(1, 1, 1);
+    const col = (this._burstColor ||= new THREE.Color()).set(color);
+    const white = (this._white ||= new THREE.Color(1, 1, 1));
     for (let i = 0; i < n; i++) {
       const k = this.sparkNext++ % this.sparkN;
       const d = this.sparkData[k];
@@ -930,7 +1371,8 @@ export class DragonRush3D {
   // ---------- symbols on the grid ----------
   make(id) {
     const o = this.kinds[id].clone();
-    o.userData = { id, ph: Math.random() * 6.28, base: this.kinds[id].scale.x };
+    const part = (n) => o.getObjectByName(n);
+    o.userData = { id, ph: Math.random() * 6.28, base: this.kinds[id].scale.x, flame: part('flame'), paw: part('paw'), spark: part('spark'), swing: part('swing'), tail: part('tail'), zzz: part('zzz') };
     this.board.add(o);
     return o;
   }
@@ -1058,6 +1500,149 @@ export class DragonRush3D {
       }),
     );
   }
+  // ---------- ✨ marker moves ----------
+  cellPos(c, r) {
+    return new THREE.Vector3(xOf(c), yOf(r), 0.4);
+  }
+  /** Replace whatever is at (c, r) with a new symbol, popping it in. */
+  swap(c, r, id, color = '#ffffff') {
+    const old = this.cells[c][r];
+    if (old) this.remove(old);
+    const o = this.make(id);
+    o.position.set(xOf(c), yOf(r), 0);
+    this.cells[c][r] = o;
+    this.flash(o.position, color, 1.7);
+    this.burst(o.position, color, 10, 0.8);
+    const b = o.userData.base;
+    return this.tween(340 / this.speed, (u) => o.scale.setScalar(b * (u < 1 ? 0.3 + 0.7 * u + Math.sin(u * Math.PI) * 0.4 : 1)));
+  }
+  // one object thrown out of a blast, spinning and shrinking
+  fling(o, from) {
+    const v = o.position.clone().sub(from).setZ(0);
+    if (v.lengthSq() < 1e-4) v.set(Math.random() - 0.5, 1, 0);
+    v.normalize().multiplyScalar(2.4);
+    const p0 = o.position.clone();
+    const b = o.userData.base;
+    const spin = (Math.random() - 0.5) * 14;
+    return this.tween(460 / this.speed, (u) => {
+      o.position.set(p0.x + v.x * u, p0.y + v.y * u + 1.6 * u - 3.2 * u * u, p0.z + 2 * u);
+      o.rotation.z = u * spin;
+      o.scale.setScalar(b * (1 - u * 0.85));
+      if (u >= 1) this.remove(o);
+    });
+  }
+  /** 🧨 each firecracker in the chain goes off in turn, throwing out what's around it. */
+  async blast(chain, removed, onBang) {
+    const left = new Set(removed.map(([c, r]) => c * ROWS + r));
+    const ps = [];
+    for (const [c, r] of chain) {
+      const p = this.cellPos(c, r);
+      this.flash(p, '#ffb020', 3.6);
+      this.flash(p, '#ffffff', 1.8);
+      this.burst(p, '#ff5a1f', 36, 1.8);
+      this.burst(p, '#ffd23f', 18, 1.2);
+      this.kick(0.45);
+      onBang?.();
+      for (let dc = -1; dc <= 1; dc++)
+        for (let dr = -1; dr <= 1; dr++) {
+          const x = c + dc;
+          const y = r + dr;
+          if (!left.delete(x * ROWS + y)) continue;
+          const o = this.cells[x][y];
+          this.cells[x][y] = null;
+          if (o) ps.push(this.fling(o, p));
+        }
+      await this.wait(190);
+    }
+    await Promise.all(ps);
+  }
+  /** 🪁 the kites fly off the top, and every copy of their symbol follows them up. */
+  kiteAway(kites, color = '#ffffff') {
+    const ps = [];
+    kites.forEach((k, i) => {
+      const kite = this.cells[k.c][k.r];
+      this.cells[k.c][k.r] = null;
+      const delay = (i * 250) / this.speed;
+      if (kite) {
+        const p0 = kite.position.clone();
+        ps.push(
+          this.tween(1300 / this.speed, (u) => {
+            kite.position.set(p0.x + Math.sin(u * 9) * 0.5 * u, p0.y + u * u * (TOP + 4 - p0.y), 0.6 * u);
+            kite.rotation.z = Math.sin(u * 14) * 0.45;
+            if (u >= 1) this.remove(kite);
+          }, delay),
+        );
+      }
+      k.cells.forEach(([c, r], j) => {
+        const o = this.cells[c][r];
+        if (!o) return;
+        this.cells[c][r] = null;
+        const p0 = o.position.clone();
+        const tx = xOf(k.c);
+        ps.push(
+          this.tween(900 / this.speed, (u) => {
+            if (u > 0 && !o.userData.lifted) {
+              o.userData.lifted = true;
+              this.flash(p0, color, 1.3);
+            }
+            const e = u * u;
+            o.position.set(p0.x + (tx - p0.x) * e * 0.7 + Math.sin(u * 10 + j) * 0.15, p0.y + e * (TOP + 3 - p0.y), p0.z + u);
+            o.rotation.z = u * 5;
+            if (u >= 1) this.remove(o);
+          }, delay + (350 + j * 45) / this.speed),
+        );
+      });
+    });
+    return Promise.all(ps);
+  }
+  /** A glowing orb flies from one point to another (moon gathering, cat waving at a spot…). */
+  orb(from, to, color = '#ffe08a', delay = 0, dur = 560) {
+    const m = this.orbs[this.orbNext++ % this.orbs.length];
+    m.material.color.set(color);
+    return this.tween(dur / this.speed, (u) => {
+      m.visible = u < 1;
+      m.position.lerpVectors(from, to, 1 - (1 - u) * (1 - u));
+      m.position.y += Math.sin(u * Math.PI) * 0.9;
+      m.position.z = 0.9;
+      m.scale.setScalar(0.55 + Math.sin(u * Math.PI) * 0.6);
+      if (u >= 1) this.flash(to, color, 1.5);
+    }, delay / this.speed);
+  }
+  /** 🐱 make the cat at (c, r) wave like it means it. */
+  wave(c, r) {
+    const o = this.cells[c][r];
+    if (!o) return;
+    o.userData.wave = performance.now() + 800 / this.speed;
+    this.flash(o.position, '#ffd23f', 1.4);
+  }
+  /** 🔔 every gong on the board rings. */
+  ringGongs() {
+    for (const col of this.cells)
+      for (const o of col) {
+        if (o?.userData.id !== 'gong') continue;
+        o.userData.ring = performance.now() + 1400;
+        this.flash(o.position, '#ffd23f', 3);
+        this.burst(o.position, '#ffd23f', 24, 1.4);
+      }
+    this.kick(0.6);
+    return this.wait(1000);
+  }
+  /** 🥚 crack the egg at (c, r) (it's swapped for the cracked one). */
+  crack(c, r) {
+    this.kick(0.15);
+    this.burst(this.cellPos(c, r), '#ffb020', 14, 0.7);
+    return this.swap(c, r, 'egg1', '#ffb020');
+  }
+  /** 🐣 hatch: the egg and its neighbours become wilds, in a little ripple. */
+  hatch({ c, r, cells }) {
+    const p = this.cellPos(c, r);
+    this.flash(p, '#7dffb0', 4);
+    this.burst(p, '#3dff8a', 40, 1.6);
+    this.burst(p, '#ffffff', 16, 1.2);
+    this.kick(0.5);
+    return Promise.all(cells.map(([x, y], i) => this.wait(i * 90).then(() => this.swap(x, y, 'wild', '#3dff8a'))));
+  }
+
   cellsOf(id) {
     const out = [];
     this.cells.forEach((col, c) => col.forEach((o, r) => o?.userData.id === id && out.push([c, r])));
@@ -1143,10 +1728,37 @@ export class DragonRush3D {
     this.camera.setViewOffset(w, h, w / 2 - cx, h / 2 - cy, w, h);
     this.camera.updateProjectionMatrix();
   }
+  // watch the frame rate in half-second windows: slow → render fewer pixels, calm for a while → back up
+  adapt(raw) {
+    const p = this.perf;
+    if (raw > 0.25) return; // a hitch or a hidden tab, not a trend
+    p.t += raw;
+    p.n++;
+    if (p.t < 0.5) return;
+    const avg = p.t / p.n;
+    p.t = p.n = 0;
+    p.best = Math.min(p.best, avg); // ≈ the display's refresh interval
+    const min = Math.min(1, this.maxRatio) * 0.75;
+    let next = this.ratio;
+    if (avg > Math.max(0.024, p.best * 1.5)) {
+      next = Math.max(min, this.ratio - 0.25);
+      p.calm = 0;
+    } else if (avg < p.best * 1.25 + 0.002 && ++p.calm >= 6 && this.ratio < this.maxRatio) {
+      next = Math.min(this.maxRatio, this.ratio + 0.25);
+      p.calm = 0;
+    }
+    if (next !== this.ratio) {
+      this.ratio = next;
+      this.renderer.setPixelRatio(next);
+      this.renderer.setSize(this.W, this.H, false);
+    }
+  }
   frame() {
-    const dt = Math.min(this.clock.getDelta(), 0.05);
+    const raw = this.clock.getDelta();
+    const dt = Math.min(raw, 0.05);
     const t = this.clock.elapsedTime;
     const now = performance.now();
+    this.adapt(raw);
 
     for (let i = this.anims.length - 1; i >= 0; i--) {
       const a = this.anims[i];
@@ -1170,12 +1782,21 @@ export class DragonRush3D {
 
     // idle symbol life
     for (const o of this.board.children) {
-      const ph = o.userData.ph;
+      const { ph, flame, paw, spark, swing, tail, zzz, wave, ring } = o.userData;
       o.rotation.y = Math.sin(t * 1.3 + ph) * 0.32;
-      if (o.userData.id === 'pearl') {
-        const f = o.getObjectByName('flame');
-        if (f) f.scale.set(1 + Math.sin(t * 9 + ph) * 0.06, 1 + Math.sin(t * 7 + ph) * 0.1, 1);
+      if (flame) flame.scale.set(1 + Math.sin(t * 9 + ph) * 0.06, 1 + Math.sin(t * 7 + ph) * 0.1, 1);
+      if (paw) {
+        const hard = wave > now;
+        paw.rotation.z = 0.25 + Math.sin(t * (hard ? 18 : 5) + ph) * (hard ? 0.75 : 0.35);
       }
+      if (spark) spark.scale.setScalar(0.6 + Math.random() * 0.7);
+      if (tail) tail.rotation.z = Math.sin(t * 4 + ph) * 0.3;
+      if (zzz) {
+        const k = (t * 0.45 + ph) % 1;
+        zzz.position.y = 0.3 + k * 0.22;
+        zzz.scale.setScalar(0.5 + k * 0.7);
+      }
+      if (swing) swing.rotation.x = ring > now ? Math.sin(t * 16) * 0.6 * ((ring - now) / 1400) : 0;
     }
 
     // sparks
@@ -1188,7 +1809,7 @@ export class DragonRush3D {
       d.v.y -= 9 * dt;
       d.p.addScaledVector(d.v, dt);
       const s = Math.max(0, d.life) * d.s;
-      this._q.setFromEuler(new THREE.Euler(t * 5 + i, t * 3, 0));
+      this._q.setFromEuler(this._e.set(t * 5 + i, t * 3, 0));
       this._m.compose(d.p, this._q, this._s.set(s, s, s));
       this.sparks.setMatrixAt(i, this._m);
     }
