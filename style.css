@@ -3725,7 +3725,8 @@ html:has(> body.in-blackjack) { overflow: hidden; }
 .bj-money span:last-child b { color: var(--gold); }
 .bj-chips { display: flex; gap: 8px; }
 .bj-chips[hidden] { display: none; }
-.bj-chip { width: 46px; height: 46px; padding: 0; font-weight: 900; font-size: 13px; cursor: pointer; transition: translate 0.12s; }
+/* the chips borrow the rack's look (.pchip), but not its stacking: they're buttons in a row here */
+.bj-chip { position: relative; left: auto; bottom: auto; transform: none; flex: none; width: 46px; height: 46px; padding: 0; font-weight: 900; font-size: 13px; cursor: pointer; transition: translate 0.12s; box-shadow: 0 4px 0 rgba(0, 0, 0, 0.45), inset 0 0 0 3px rgba(0, 0, 0, 0.18); }
 .bj-chip:hover { translate: 0 -4px; }
 .bj-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: center; }
 .bj-actions .btn { min-width: 84px; padding: 10px 14px; font-weight: 800; }
@@ -3754,7 +3755,8 @@ html:has(> body.in-blackjack) { overflow: hidden; }
 .bj-heat.cold { color: #8fc8ff; text-shadow: 0 0 10px rgba(80, 150, 255, 0.7); }
 .bj-name.staff { background: rgba(20, 20, 26, 0.85); color: #fff; border: 1px solid rgba(255, 255, 255, 0.3); }
 .bj-name.boss { background: #8a1024; color: #fff; border-color: #ff6b81; }
-.bj-offer { position: absolute; left: 0; top: 0; z-index: 4; display: flex; gap: 6px; }
+/* the labels layer lets clicks through to the table; the waiter's buttons need to catch them */
+.bj-offer { position: absolute; left: 0; top: 0; z-index: 4; display: flex; gap: 6px; pointer-events: auto; }
 .bj-offer .btn { padding: 7px 12px; font-size: 13px; font-weight: 800; }
 /* the high-limit table: burgundy and gold */
 .bj.high-limit .bj-title { border-color: #ffdf7a; background: linear-gradient(180deg, #3a0612, #14030a); }
