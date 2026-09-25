@@ -5,6 +5,7 @@
 import * as THREE from 'three';
 import { PhoneOverlay, SelfieCam, SCREEN_PX } from './phone3d.js';
 import { REPLIES, buildDave } from './dave.js';
+import { DATES, GIFTS, RING, PROPOSE_AT } from './girlfriend.js';
 import { WALLPAPERS, playRingtone } from './skins.js';
 import { CATALOG } from './avatar.js';
 import { emit } from './events.js';
@@ -153,7 +154,7 @@ function renderDaveWallpaper() {
  *     update?(view) (redraw in place, for apps with a 3D scene in them),
  *     click?(button) → true if it was theirs, input?(el), change?(el) }
  */
-export function createPhone({ button, store, sound, toast, booze, dave, hangover, settings, courier, getBalance, spend, pause3d, resume3d, canOpen, roomVisible, bannersOn = () => true }) {
+export function createPhone({ button, store, sound, toast, booze, dave, gf, hangover, settings, courier, getBalance, spend, pause3d, resume3d, canOpen, roomVisible, bannersOn = () => true }) {
   const apps = new Map(); // the plug-in apps, by id
   let layer = null;
   let overlay = null;
@@ -166,10 +167,14 @@ export function createPhone({ button, store, sound, toast, booze, dave, hangover
   let order = null; // { item, left }
   let photos = store.get('fr.selfies', []);
   let viewing = null;
+  let chatWith = 'dave'; // whose messages you're reading: 'dave' or 'gf'
+  let gfTyping = false;
+  let gfChips = null;
+  let gfMenu = null; // 'date' | 'gift' | null: the menu open under their thread
 
   // ---------- the button in the top bar ----------
   const badge = () => {
-    const n = dave.unread();
+    const n = dave.unread() + gf.unread();
     const other = [...apps.values()].some((a) => a.dot?.());
     button.querySelector('.ph-badge').textContent = n ? (n > 9 ? '9+' : n) : other ? '!' : '';
     button.classList.toggle('has-unread', n > 0 || other);
@@ -253,7 +258,10 @@ export function createPhone({ button, store, sound, toast, booze, dave, hangover
     viewing = null;
     if (app === 'messages') {
       chips = null;
-      dave.markRead();
+      gfChips = null;
+      if (!dave.met() && gf.met()) chatWith = 'gf';
+      if (chatWith === 'gf') gf.markRead();
+      else dave.markRead();
     }
     render();
     if (app === 'camera') startCamera();
@@ -300,7 +308,7 @@ export function createPhone({ button, store, sound, toast, booze, dave, hangover
   }
 
   function homeHtml() {
-    const n = dave.unread();
+    const n = dave.unread() + gf.unread();
     const app = (id, emoji, label, extra = '') => `<button type="button" class="ph-app" data-app="${id}"><span class="ph-icon i-${id}">${emoji}${extra}</span><small>${label}</small></button>`;
     const dot = (d) => (d ? `<b class="ph-dot">${d === true ? '!' : d}</b>` : '');
     const ext = (a) => app(a.id, a.icon?.() || a.emoji, a.label, dot(a.dot?.()));
@@ -325,7 +333,51 @@ export function createPhone({ button, store, sound, toast, booze, dave, hangover
 
   const header = (title, sub = '') => `<div class="ph-head"><button type="button" class="ph-back" data-app="home">‹</button><div><b>${title}</b>${sub ? `<small>${sub}</small>` : ''}</div></div>`;
 
+  // Dave and (if you've met her) Scarlett, a tab each
+  function threadTabs() {
+    if (!gf.met() || !dave.met()) return '';
+    const tab = (id, label, n) => `<button type="button" class="msg-tab${chatWith === id ? ' on' : ''}" data-thread="${id}">${label}${n ? ` <b>${n}</b>` : ''}</button>`;
+    return `<div class="msg-tabs">${tab('dave', 'Dave 🍺', dave.unread())}${tab('gf', `${gf.name()} ${gf.emoji()}`, gf.unread())}</div>`;
+  }
+
+  function bubblesHtml(list, mine) {
+    return list
+      .map((x, i) => {
+        const prev = list[i - 1];
+        const stamp = !prev || x.t - prev.t > 5 * 60000 ? `<div class="msg-stamp">${new Date(x.t).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</div>` : '';
+        return `${stamp}<div class="msg ${x.from === mine ? 'me' : 'them'}">${esc(x.m)}</div>`;
+      })
+      .join('');
+  }
+
+  function gfHtml() {
+    gfChips ??= ['sweet', 'flirty', 'cold'].map((kind) => ({ kind, m: pick(gf.replies[kind]) })).sort(() => Math.random() - 0.5);
+    const list = gf.thread();
+    const last = list[list.length - 1];
+    const love = gf.love();
+    const sub = gfTyping ? 'typing…' : gf.dating() ? `${gf.married() ? '💍 ' : ''}your ${gf.title()} · ❤️ ${love}%` : '💔 dumped you';
+    const menu =
+      gfMenu === 'date'
+        ? `<div class="gf-menu">${DATES.map((d) => `<button type="button" class="gf-opt" data-gdate="${d.id}"><span>${d.emoji}</span><b>${d.name}</b><em>${d.cost ? money(d.cost) : 'free'}</em></button>`).join('')}</div>`
+        : gfMenu === 'gift'
+        ? `<div class="gf-menu">${GIFTS.map((g) => `<button type="button" class="gf-opt${gf.gifts()[g.slot] === g.id ? ' worn' : ''}" data-ggift="${g.id}"><span>${g.emoji}</span><b>${g.name}</b><em>👛 ${money(g.price)}</em></button>`).join('')}</div>`
+        : `<div class="msg-chips">${gfChips.map((c) => `<button type="button" class="msg-chip ${c.kind === 'sweet' ? 'nice' : c.kind === 'cold' ? 'mean' : 'weird'}" data-greply="${c.kind}" data-m="${esc(c.m)}">${esc(c.m)}</button>`).join('')}</div>`;
+    const canPropose = !gf.married() && !gf.engaged() && love >= PROPOSE_AT;
+    const actions = `<div class="gf-actions">
+        <button type="button" class="gf-act${gfMenu === 'date' ? ' on' : ''}" data-gmenu="date">💌 Date</button>
+        <button type="button" class="gf-act${gfMenu === 'gift' ? ' on' : ''}" data-gmenu="gift">🎁 Gift</button>
+        ${canPropose ? `<button type="button" class="gf-act ring" data-gpropose>💍 Propose · 👛 ${money(RING)}</button>` : ''}
+      </div>`;
+    return `
+      ${header(`${gf.name()} ${gf.emoji()}`, sub)}
+      ${threadTabs()}
+      ${gf.dating() ? `<div class="gf-meter"><i style="width:${love}%"></i></div>` : ''}
+      <div class="msg-list">${bubblesHtml(list, 'me')}${last?.from === 'me' ? '<div class="msg-seen">Delivered</div>' : ''}${gfTyping ? '<div class="msg them typing"><i></i><i></i><i></i></div>' : ''}</div>
+      ${gf.dating() ? actions + menu : ''}`;
+  }
+
   function messagesHtml() {
+    if (chatWith === 'gf' && gf.met()) return gfHtml();
     if (!dave.met()) {
       return `${header('Messages')}<div class="msg-empty">No messages yet.<br><small>You don't know anyone called Dave. Yet.</small></div>`;
     }
@@ -345,6 +397,7 @@ export function createPhone({ button, store, sound, toast, booze, dave, hangover
     const seen = last?.from === 'me' ? '<div class="msg-seen">Delivered</div>' : '';
     return `
       ${header('Dave 🍺', typing ? 'typing…' : moodLabel(dave.mood()))}
+      ${threadTabs()}
       <div class="msg-list">${bubbles}${seen}${typing ? '<div class="msg them typing"><i></i><i></i><i></i></div>' : ''}</div>
       <div class="msg-chips">
         ${wantsSorry ? `<button type="button" class="msg-chip sorry" data-reply="sorry" data-m="${esc(REPLIES.sorry[0])}">${esc(REPLIES.sorry[0])}</button>` : ''}
@@ -509,6 +562,39 @@ export function createPhone({ button, store, sound, toast, booze, dave, hangover
     if (t.classList.contains('ph-homebar')) return show('home');
     if (t.dataset.app) return show(t.dataset.app);
     if (apps.get(view)?.click?.(t)) return;
+    if (t.dataset.thread) {
+      chatWith = t.dataset.thread;
+      if (chatWith === 'gf') gf.markRead();
+      else dave.markRead();
+      sound.blip(1200, 0.03, 'sine', 0.05);
+      return render();
+    }
+    if (t.dataset.gmenu) {
+      gfMenu = gfMenu === t.dataset.gmenu ? null : t.dataset.gmenu;
+      sound.blip(1100, 0.03, 'sine', 0.05);
+      return render();
+    }
+    if (t.dataset.gdate) {
+      gfMenu = null;
+      gf.date(t.dataset.gdate);
+      return render();
+    }
+    if (t.dataset.ggift) {
+      gfMenu = null;
+      gf.gift(t.dataset.ggift);
+      return render();
+    }
+    if (t.dataset.gpropose != null) {
+      gf.propose();
+      return render();
+    }
+    if (t.dataset.greply) {
+      if (gfTyping) return;
+      gf.reply(t.dataset.greply, t.dataset.m);
+      gfChips = null;
+      sound.blip(1500, 0.03, 'sine', 0.06);
+      return render();
+    }
     if (t.dataset.reply) {
       if (typing) return;
       dave.reply(t.dataset.reply, t.dataset.m);
@@ -548,6 +634,26 @@ export function createPhone({ button, store, sound, toast, booze, dave, hangover
     }
   });
   const playTone = (id) => playRingtone(sound, (id || settings.look().ringtone).replace(/tone$/, ''));
+
+  // ---------- …and so does Scarlett ----------
+  gf.on((type, data) => {
+    if (type === 'typing') gfTyping = data;
+    badge();
+    if (layer && view === 'messages') {
+      if (type === 'message' && chatWith === 'gf') gf.markRead();
+      render();
+    }
+  });
+  gf.setHooks({
+    tone: () => playTone(),
+    isReading: () => !!layer && view === 'messages' && chatWith === 'gf',
+    onText: () => {
+      button.classList.remove('buzz');
+      void button.offsetWidth;
+      button.classList.add('buzz');
+      overlay?.vibrate();
+    },
+  });
   dave.setHooks({
     tone: () => playTone(),
     openPhone: (app) => open(app),
