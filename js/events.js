@@ -13,7 +13,7 @@ export function on(name, fn) {
  * Tell whoever is listening. Events used:
  *   spin      { game: 'roulette' | 'slots' | 'blackjack', net, staked, multiple, straight }
  *   drink     { price, bottle }
- *   selfie, food, cashout { amount }, buy { item }, freespins, dishes, broke, level { level }
+ *   selfie, food, cashout { amount }, buy { item }, freespins, dishes, broke, level { level }, ufo
  *   blackjack { type: 'natural' | 'double' | 'charlie' | 'split' | 'sidebet' | 'perfect' | 'tip' | 'counted' }
  */
 export function emit(name, data = {}) {

@@ -156,6 +156,11 @@ A rubber stamp slams **UNPAID** onto the total. Pay it, or say *"Wash dishes ins
 
 You get 30 seconds, $20 a plate and $5 per gross thing. Wash off the whole tab and the chef might slip you a tip. Fall short and the manager writes off the rest, but you're **banned from the bar for 90 seconds**.
 
+### 🧓🔥🛸 LIFE AROUND THE TABLE
+- **🧓 Grandma**: lose three roulette spins in a row and she shuffles over in her bathrobe, wags a finger and minds some of your chips (a fifth, up to $500) until tomorrow. Next time you visit, she gives them back. With a cookie. Once a day.
+- **🔥 You're on fire**: win three spins in a row and an announcer yells **YOU'RE ON FIRE!**, the wheel's rim bursts into flames, and every spin earns **×1.5 XP** until you lose one.
+- **🛸 Alien abduction**: once in a blue moon a UFO swoops over the table and beams up a stack of your chips. It's in the terms and conditions. There's a trophy for it: **Close Encounter**.
+
 ### 🍺 DAVE'S REVENGE
 Remember Dave, the guy who crashed your bottle party? **He remembers you.** (If you skipped the party, you'll meet him the first time you get properly drunk.)
 
@@ -211,7 +216,7 @@ Every bet you make (one spin, on roulette or the slots) earns **XP**. Bigger bet
 Your phone has a **🏆 Goals** app:
 
 - **Daily challenges**: three a day (the same three for everyone), like *hit a straight-up number*, *win 2 spins in a row*, *order bottle service* or *lose 5 spins (we believe in you)*. Each pays XP and wallet money; finish all three for a bonus.
-- **Achievements**: sixteen of them, from *Beginner's Luck* to *Whale Watching* ($10,000 on one spin). Each one spins onto the screen as a **3D trophy** and then stands on the **trophy shelves** behind your character.
+- **Achievements**: seventeen of them, from *Beginner's Luck* to *Whale Watching* ($10,000 on one spin). Each one spins onto the screen as a **3D trophy** and then stands on the **trophy shelves** behind your character.
 - **🎟️ Loyalty card**: one stamp for every $100 you lose. Fill all ten and redeem it: a rubber stamp slams down **REDEEMED**, the card flips over, and your prize is… **nothing**. Thank you for your loyalty.
 - **Level perks**: **🛋️ VIP booth** at level 5 (bottle service 20% off), **🎩 High-roller table** at level 10 (red velvet felt and velvet ropes around the wheel, minimum $100 a spin, ×1.5 XP), **🥂 High-limit blackjack** at level 12 (burgundy felt, a new dealer, $500 minimum, ×1.5 XP) and **🐋 Whale mode** at level 15 (enormous chips and an inflatable whale bobbing behind the wheel, minimum $1,000 a spin, ×2 XP). Switch the last three on and off whenever you like.
 
@@ -259,15 +264,15 @@ On narrow screens the table flips vertical: 0 on top, numbers running down the s
 - ~~🎩 **A character and a hat store**~~ ✅ **SHIPPED**
 - ~~🗺️ **A map of the casino** on your phone. Tap somewhere, walk there.~~ ✅ **SHIPPED**
 - 🎲 **Craps**, purely so we can put the word "craps" in a README
-- 🧓 **Your grandma**, who shows up and tells you to stop after 3 losses in a row
+- ~~🧓 **Your grandma**, who shows up and tells you to stop after 3 losses in a row~~ ✅ **SHIPPED**
 - ~~🎟️ **Loyalty card**, earn points for every fake dollar lost and redeem them for absolutely nothing~~ ✅ **SHIPPED**
 - 📉 **Fake stock ticker** of your net worth, with dramatic crash sound effects
 - 🌙 **Night mode**, even though casinos famously have no clocks or windows
 - 🔁 **Martingale button**, which doubles your bet after every loss until the heat death of the universe
-- 🎤 **Hype announcer** who screams "HE'S ON FIRE" after two wins in a row
+- ~~🎤 **Hype announcer** who screams "HE'S ON FIRE" after two wins in a row~~ ✅ **SHIPPED** (three wins, and the wheel catches fire)
 - ~~🎁 **Daily login bonus** of $1, delivered via a 30-second unskippable animation~~ ✅ **SHIPPED**
 - ~~🐋 **Whale mode**: the chips are 10× bigger and the table gets a velvet rope~~ ✅ **SHIPPED** (level 15)
-- 🛸 **Alien abduction**: a UFO beams your chips away. It's in the terms and conditions.
+- ~~🛸 **Alien abduction**: a UFO beams your chips away. It's in the terms and conditions.~~ ✅ **SHIPPED**
 - 🎮 **Controller support**, because roulette on a gamepad is how nature intended
 - 🥚 **Easter eggs** that we will absolutely forget where we hid
 
@@ -338,6 +343,7 @@ js/hangover3d.js      the 3D hotel room: blinds, sunbeams, buzzing phone, the co
 js/phone.js           the phone: home screen, Messages, CabCab, GrubGrab, Camera, plug-in apps
 js/phone3d.js         the 3D handset (CSS3D screen) and the selfie camera scene
 js/courier.js         Marco the food courier, walking across your table in 3D
+js/tablelife.js       Grandma, being on fire, and the UFO: life around the roulette table
 js/avatar.js          your 3D character, the store catalogue, the turntable
 js/settings.js        the Style, Store, Goals and Settings apps
 js/bank.js            the Bank app: cash out, fake card and fake Swish deposits

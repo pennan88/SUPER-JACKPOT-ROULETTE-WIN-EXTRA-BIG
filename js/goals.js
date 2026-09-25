@@ -48,6 +48,7 @@ export const ACHIEVEMENTS = [
   { id: 'natural', name: 'Natural', desc: 'Get a blackjack', kind: 'chip', tier: 'silver', on: 'blackjack', test: (e) => e.type === 'natural' },
   { id: 'charlie', name: 'Five Card Charlie', desc: 'Win a blackjack hand with 5 or more cards', kind: 'star', tier: 'gold', on: 'blackjack', test: (e) => e.type === 'charlie' },
   { id: 'perfect', name: 'Perfect Pair', desc: 'Hit a perfect pair side bet (25×)', kind: 'chip', tier: 'gold', on: 'blackjack', test: (e) => e.type === 'perfect' },
+  { id: 'ufo', name: 'Close Encounter', desc: 'Have your chips abducted by a UFO', kind: 'star', tier: 'silver', on: 'ufo' },
   { id: 'counted', name: 'Counted Out', desc: 'Get walked out of blackjack by the pit boss', kind: 'cup', tier: 'bronze', on: 'blackjack', test: (e) => e.type === 'counted' },
 ];
 const ACH_XP = 150;
@@ -176,7 +177,7 @@ export function createGoals({ store, levels, wallet, toast, sound, flair, onChan
     }
     handle('spin', e);
   });
-  for (const name of ['drink', 'selfie', 'food', 'cashout', 'buy', 'freespins', 'dishes', 'broke', 'level', 'blackjack']) on(name, (e) => handle(name, e));
+  for (const name of ['drink', 'selfie', 'food', 'cashout', 'buy', 'freespins', 'dishes', 'broke', 'level', 'blackjack', 'ufo']) on(name, (e) => handle(name, e));
 
   // ---------- perks ----------
   const unlocked = (p) => levels.level() >= p.level;
