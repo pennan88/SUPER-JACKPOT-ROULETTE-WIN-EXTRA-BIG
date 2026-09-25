@@ -145,6 +145,11 @@ export const CATALOG = [
   { id: 'flex', slot: 'emote', name: 'Flex', emoji: '💪', price: 120 },
   { id: 'dab', slot: 'emote', name: 'Dab', emoji: '🙆', price: 150, note: "It's 2016 in the casino." },
   { id: 'moneyrain', slot: 'emote', name: 'Make It Rain', emoji: '💸', price: 400, note: 'Selfies with money falling all around you.' },
+  // the hotel room you wake up in, the morning after
+  { id: 'motel', slot: 'hotel', name: 'Budget Room', emoji: '🛏️', price: 0, note: 'Comes with a traffic cone.' },
+  { id: 'suite', slot: 'hotel', name: 'Gold Suite', emoji: '🛎️', price: 1500, level: 5, note: 'A gold headboard and champagne on ice. See it the morning after.' },
+  { id: 'hottub', slot: 'hotel', name: 'Hot Tub Suite', emoji: '🛁', price: 4000, level: 9, note: 'The Gold Suite, plus a bubbling hot tub by the window.' },
+  { id: 'tiger', slot: 'hotel', name: 'Penthouse (with Tiger)', emoji: '🐅', price: 12000, level: 14, note: 'Hot tub, chandelier and a pet tiger. Nobody asks where it came from.' },
 ];
 export const SLOTS = [
   ['top', '👕 Outfit'],
@@ -158,9 +163,10 @@ export const SLOTS = [
   ['ringtone', '🔔 Ringtone'],
   ['winFx', '🎉 Win style'],
   ['emote', '🤳 Selfie emote'],
+  ['hotel', '🏨 Hotel room'],
 ];
 /** Slots you always have something in (no "None"). */
-export const REQUIRED_SLOTS = new Set(['top', 'phoneSkin', 'wallpaper', 'ringtone', 'winFx', 'emote']);
+export const REQUIRED_SLOTS = new Set(['top', 'phoneSkin', 'wallpaper', 'ringtone', 'winFx', 'emote', 'hotel']);
 
 export const DEFAULT_LOOK = {
   skin: '#f1c27d',
@@ -183,6 +189,7 @@ export const DEFAULT_LOOK = {
   ringtone: 'chime',
   winFx: 'classic',
   emote: 'wave',
+  hotel: 'motel',
 };
 
 // ---------- the model (same build as Dave: root at the waist, feet on the floor at -1.46) ----------

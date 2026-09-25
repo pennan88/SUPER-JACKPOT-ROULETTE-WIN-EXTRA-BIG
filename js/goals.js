@@ -51,6 +51,8 @@ export const ACHIEVEMENTS = [
   { id: 'taken', name: 'Taken', desc: 'Get yourself a date at the roulette table', kind: 'cup', tier: 'silver', on: 'girlfriend', test: (e) => e.type === 'yes' },
   { id: 'firstdate', name: 'Dinner for Two', desc: 'Take your date on a date', kind: 'bottle', tier: 'bronze', on: 'girlfriend', test: (e) => e.type === 'date' },
   { id: 'married', name: 'Married in Vegas', desc: 'Propose, and get married (Dave will be there)', kind: 'crown', tier: 'gold', on: 'girlfriend', test: (e) => e.type === 'married' },
+  { id: 'heartbreaker', name: 'Heartbreaker', desc: 'End it. Over text, obviously.', kind: 'cup', tier: 'bronze', on: 'girlfriend', test: (e) => e.type === 'breakup' },
+  { id: 'slapped', name: 'Caught', desc: 'Get slapped for flirting in front of your date', kind: 'star', tier: 'bronze', on: 'girlfriend', test: (e) => e.type === 'slapped' },
   { id: 'dumped', name: 'Dumped by Text', desc: 'Get dumped. By text. 💔', kind: 'cup', tier: 'bronze', on: 'girlfriend', test: (e) => e.type === 'dumped' },
   { id: 'ufo', name: 'Close Encounter', desc: 'Have your chips abducted by a UFO', kind: 'star', tier: 'silver', on: 'ufo' },
   { id: 'counted', name: 'Counted Out', desc: 'Get walked out of blackjack by the pit boss', kind: 'cup', tier: 'bronze', on: 'blackjack', test: (e) => e.type === 'counted' },

@@ -30,8 +30,9 @@ const clock = () => new Date().toLocaleTimeString('en-US', { hour: 'numeric', mi
 /**
  * Scrolling, done by hand. The screen sits in a 3D transform (CSS3DRenderer), and Chrome's scroll
  * hit-testing doesn't find the lists inside it: the wheel scrolls the page behind the phone and a
- * finger drag does nothing. So: the wheel scrolls whatever list is under it, and on touch you drag
- * the list (with a little momentum). The map, the turntable and sliders handle their own touches.
+ * finger drag does nothing. So: the wheel scrolls whatever list is under it (a sideways row, like the
+ * store's filters, scrolls sideways), and you drag lists with a finger or the mouse (with a little
+ * momentum). The map, the turntable and sliders handle their own touches.
  */
 function assistScroll(screen) {
   const scrollable = (el, axis) => {
@@ -51,6 +52,9 @@ function assistScroll(screen) {
       let dx = e.deltaX * k;
       let dy = e.deltaY * k;
       if (e.shiftKey && !dx) [dx, dy] = [dy, 0];
+      // a plain mouse wheel over a sideways row (the store's filters) scrolls it sideways
+      const row = !dx && scrollable(e.target, 'x');
+      if (row && (dy > 0 ? row.scrollLeft + row.clientWidth < row.scrollWidth - 1 : row.scrollLeft > 0)) [dx, dy] = [dy, 0];
       const across = Math.abs(dx) > Math.abs(dy);
       const el = across ? scrollable(e.target, 'x') : scrollable(e.target, 'y');
       el?.scrollBy(across ? { left: dx } : { top: dy });
@@ -64,7 +68,7 @@ function assistScroll(screen) {
   screen.addEventListener('pointerdown', (e) => {
     cancelAnimationFrame(coast);
     dragged = false;
-    if (e.pointerType === 'mouse' || e.target.closest('canvas, input[type=range]')) return;
+    if ((e.pointerType === 'mouse' && e.button !== 0) || e.target.closest('canvas, input[type=range]')) return;
     // screen pixels per pixel of the phone's screen (it's scaled by the 3D view)
     const scale = screen.getBoundingClientRect().height / screen.offsetHeight || 1;
     drag = { id: e.pointerId, x: e.clientX, y: e.clientY, scale, el: null, axis: null, v: 0, t: e.timeStamp, target: e.target };
@@ -171,6 +175,7 @@ export function createPhone({ button, store, sound, toast, booze, dave, gf, hang
   let gfTyping = false;
   let gfChips = null;
   let gfMenu = null; // 'date' | 'gift' | null: the menu open under their thread
+  let gfSure = false; // tapped "break up" once
 
   // ---------- the button in the top bar ----------
   const badge = () => {
@@ -355,7 +360,7 @@ export function createPhone({ button, store, sound, toast, booze, dave, gf, hang
     const list = gf.thread();
     const last = list[list.length - 1];
     const love = gf.love();
-    const sub = gfTyping ? 'typing…' : gf.dating() ? `${gf.married() ? '💍 ' : ''}your ${gf.title()} · ❤️ ${love}%` : '💔 dumped you';
+    const sub = gfTyping ? 'typing…' : gf.dating() ? `${gf.married() ? '💍 ' : ''}your ${gf.title()} · ❤️ ${love}%` : gf.ended() === 'breakup' ? '💔 you ended it' : '💔 dumped you';
     const menu =
       gfMenu === 'date'
         ? `<div class="gf-menu">${DATES.map((d) => `<button type="button" class="gf-opt" data-gdate="${d.id}"><span>${d.emoji}</span><b>${d.name}</b><em>${d.cost ? money(d.cost) : 'free'}</em></button>`).join('')}</div>`
@@ -366,6 +371,7 @@ export function createPhone({ button, store, sound, toast, booze, dave, gf, hang
     const actions = `<div class="gf-actions">
         <button type="button" class="gf-act${gfMenu === 'date' ? ' on' : ''}" data-gmenu="date">💌 Date</button>
         <button type="button" class="gf-act${gfMenu === 'gift' ? ' on' : ''}" data-gmenu="gift">🎁 Gift</button>
+        <button type="button" class="gf-act breakup${gfSure ? ' sure' : ''}" data-gbreakup>${gfSure ? (gf.married() ? '💔 Divorce? Tap again' : '💔 Sure? Tap again') : '💔'}</button>
         ${canPropose ? `<button type="button" class="gf-act ring" data-gpropose>💍 Propose · 👛 ${money(RING)}</button>` : ''}
       </div>`;
     return `
@@ -569,7 +575,14 @@ export function createPhone({ button, store, sound, toast, booze, dave, gf, hang
       sound.blip(1200, 0.03, 'sine', 0.05);
       return render();
     }
+    if (t.dataset.gbreakup != null) {
+      if (gfSure) gf.breakUp();
+      gfSure = !gfSure;
+      gfMenu = null;
+      return render();
+    }
     if (t.dataset.gmenu) {
+      gfSure = false;
       gfMenu = gfMenu === t.dataset.gmenu ? null : t.dataset.gmenu;
       sound.blip(1100, 0.03, 'sine', 0.05);
       return render();

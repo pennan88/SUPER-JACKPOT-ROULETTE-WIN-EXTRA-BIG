@@ -60,6 +60,7 @@ export function createSettings({ store, sound, toast, wallet, levels, goals, pre
     if (item.slot === 'ringtone') demo.tone?.(item.id);
     if (item.slot === 'winFx') demo.win?.(item.id);
     if (item.slot === 'emote') stage?.playEmote(item.id);
+    if (item.slot === 'hotel') toast(`🏨 ${item.name}: you'll see it the next time you wake up in the hotel. ${item.note}`);
   }
 
   function setLook(patch) {
@@ -133,7 +134,7 @@ export function createSettings({ store, sound, toast, wallet, levels, goals, pre
               <span class="st-emoji">${c.emoji}</span>
               <b>${c.name}</b>
               ${c.note ? `<small>${c.note}</small>` : ''}
-              <em>${onTry ? '👀 Trying on' : { ringtone: '🔊 Tap to listen', winFx: '🎉 Tap to preview', emote: '🤳 Tap to see it' }[c.slot] || (has ? 'Owned' : 'Tap to try on')}</em>
+              <em>${onTry ? '👀 Trying on' : { ringtone: '🔊 Tap to listen', winFx: '🎉 Tap to preview', emote: '🤳 Tap to see it', hotel: '🏨 Tap for details' }[c.slot] || (has ? 'Owned' : 'Tap to try on')}</em>
             </button>
             ${btn}
           </div>`;
@@ -242,7 +243,7 @@ export function createSettings({ store, sound, toast, wallet, levels, goals, pre
       redraw();
     } else if (t.dataset.try) {
       const item = byId(t.dataset.try);
-      if (['ringtone', 'winFx', 'emote'].includes(item.slot)) {
+      if (['ringtone', 'winFx', 'emote', 'hotel'].includes(item.slot)) {
         demoItem(item);
         return true;
       }

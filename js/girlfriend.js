@@ -16,7 +16,11 @@ const money = (n) => '$' + Math.round(n).toLocaleString('en-US');
 
 const START = new THREE.Vector3(-13, 0.8, 2.9);
 const SPOT = new THREE.Vector3(-4.4, 0.8, 2.9); // their place at the table, front left (the pick-up card sits on the right)
+// someone else, trying their luck while you're taken: in from the right, a little too close
+const START2 = new THREE.Vector3(13, 0.8, 2.9);
+const SPOT2 = new THREE.Vector3(-2.3, 0.8, 3.1);
 const RETRY_MS = 5 * 60_000; // turned down: another shot in a few minutes
+const BREAKUP_MS = 2 * 60_000; // you ended it: back on the market soon
 const DUMPED_MS = 10 * 60_000;
 const DATE_EVERY_MS = 3 * 60_000;
 export const RING = 500; // wallet dollars
@@ -142,7 +146,8 @@ export function createGirlfriend({ wheel, store, sound, toast, booze, look, leve
   const theirLook = (id = state.partner) => ({ ...DEFAULT_LOOK, ...partner(id).looks[who()], ...(id === state.partner ? state.gifts : {}) });
   const rich = () => partner().taste === 'rich';
 
-  let her = null; // the 3D date: { a, phase, t, emote, emoteUntil }
+  let her = null; // your date, in 3D
+  let other = null; // someone flirting with you while you're taken
   let wins = 0;
   let spins = 0;
   let talking = null; // the pick-up card
@@ -151,19 +156,22 @@ export function createGirlfriend({ wheel, store, sound, toast, booze, look, leve
   let engaged = false; // proposed, the ceremony's playing
 
   // ---------- in 3D, by the table ----------
+  const people = new Set();
+  function spawn(lk, from, to, face, then) {
+    const a = buildAvatar(lk);
+    a.root.scale.setScalar(0.74);
+    a.root.position.copy(from);
+    wheel.scene.add(a.root);
+    const who = { a, from, to, face, phase: 'in', t: 0, emote: null, emoteUntil: 0, then };
+    people.add(who);
+    return who;
+  }
+  const walkOff = (who) => who && who.phase !== 'out' && ((who.phase = 'out'), (who.t = 0));
   function arrive(then, id = state.partner) {
     if (her) return then?.();
-    const a = buildAvatar(theirLook(id));
-    a.root.scale.setScalar(0.74);
-    a.root.position.copy(START);
-    wheel.scene.add(a.root);
-    her = { a, phase: 'in', t: 0, emote: null, emoteUntil: 0, then };
+    her = spawn(theirLook(id), START, SPOT, 0.5, then);
   }
-  function leave() {
-    if (!her || her.phase === 'out') return;
-    her.phase = 'out';
-    her.t = 0;
-  }
+  const leave = () => walkOff(her);
   /** New clothes (a gift): swap the model where it stands. */
   function redress() {
     if (!her || her.phase !== 'stay') return;
@@ -175,70 +183,89 @@ export function createGirlfriend({ wheel, store, sound, toast, booze, look, leve
     her.a.root.position.copy(pos);
     wheel.scene.add(her.a.root);
   }
-  function react(emote) {
-    if (!her || her.phase !== 'stay') return;
-    her.emote = emote;
-    her.emoteUntil = wheel.clock.elapsedTime + 2.4;
+  function react(emote, who = her) {
+    if (!who || who.phase !== 'stay') return;
+    who.emote = emote;
+    who.emoteUntil = wheel.clock.elapsedTime + 2.4;
   }
 
   wheel.onFrame((dt, t) => {
-    if (!her) return;
-    her.t += dt;
-    const { a } = her;
-    const p = a.root.position;
-    let walking = her.phase !== 'stay';
-    if (her.phase === 'in') {
-      const k = Math.min(1, her.t / 3.2);
-      p.lerpVectors(START, SPOT, k);
-      if (k >= 1) {
-        her.phase = 'stay';
-        her.then?.();
-        her.then = null;
-        walking = false;
+    for (const who of people) {
+      who.t += dt;
+      const { a } = who;
+      const p = a.root.position;
+      let walking = who.phase !== 'stay';
+      if (who.phase === 'in') {
+        const k = Math.min(1, who.t / 3.2);
+        p.lerpVectors(who.from, who.to, k);
+        if (k >= 1) {
+          who.phase = 'stay';
+          who.then?.();
+          who.then = null;
+          walking = false;
+        }
+      } else if (who.phase === 'out') {
+        const k = Math.min(1, who.t / 3.2);
+        p.lerpVectors(who.to, who.from, k);
+        if (k >= 1) {
+          wheel.scene.remove(a.root);
+          disposeAvatar(a);
+          people.delete(who);
+          if (who === her) her = null;
+          if (who === other) other = null;
+          continue;
+        }
       }
-    } else if (her.phase === 'out') {
-      const k = Math.min(1, her.t / 3.2);
-      p.lerpVectors(SPOT, START, k);
-      if (k >= 1) {
-        wheel.scene.remove(a.root);
-        disposeAvatar(a);
-        her = null;
-        return;
-      }
+      if (who.emote && t > who.emoteUntil) who.emote = null;
+      animateAvatar(a, t, { emote: walking ? null : who.emote });
+      const stride = walking ? Math.sin(t * 7) * 0.45 : 0;
+      a.legs[0].rotation.x = stride;
+      a.legs[1].rotation.x = -stride;
+      const heading = Math.sign(who.to.x - who.from.x) * (who.phase === 'out' ? -1 : 1) * (Math.PI / 2);
+      a.root.rotation.y = walking ? heading : who.face; // turned towards you when they stop
     }
-    if (her.emote && t > her.emoteUntil) her.emote = null;
-    animateAvatar(a, t, { emote: walking ? null : her.emote });
-    const stride = walking ? Math.sin(t * 7) * 0.45 : 0;
-    a.legs[0].rotation.x = stride;
-    a.legs[1].rotation.x = -stride;
-    a.root.rotation.y = walking ? (her.phase === 'in' ? Math.PI / 2 : -Math.PI / 2) : 0.5; // turned towards you
   });
 
   // ---------- meeting ----------
-  function approach() {
-    if (state.dating || talking || her || Date.now() < state.nextTry) return;
-    const eligible = PARTNERS.filter((p) => !p.minLevel || level() >= p.minLevel);
-    const p = pick(eligible);
-    arrive(() => {
-      sound.blip(660, 0.1, 'sine', 0.06);
-      sound.blip(990, 0.14, 'sine', 0.06, 0.1);
-      talking = document.createElement('div');
-      talking.className = 'gf-talk';
-      talking.dataset.partner = p.id;
-      talking.innerHTML = `
-        <div class="gf-who">${p.emoji} ${p.names[who()]}</div>
-        <p>${p.hi}</p>
-        <div class="gf-lines">${LINES.map(([l, k]) => `<button type="button" class="btn" data-line="${k}">${l}</button>`).join('')}</div>`;
-      document.querySelector('.stage')?.appendChild(talking);
-      talking.addEventListener('click', (e) => {
-        const b = e.target.closest('[data-line]');
-        if (b) answer(b.dataset.line, p);
-      });
-    }, p.id);
+  const eligible = (not) => PARTNERS.filter((p) => p.id !== not && (!p.minLevel || level() >= p.minLevel));
+
+  function card(p, taken) {
+    sound.blip(660, 0.1, 'sine', 0.06);
+    sound.blip(990, 0.14, 'sine', 0.06, 0.1);
+    const lines = taken ? [...LINES, [`Sorry, I'm taken. ❤️`, 'loyal']] : LINES;
+    talking = document.createElement('div');
+    talking.className = `gf-talk${taken ? ' taken' : ''}`;
+    talking.dataset.partner = p.id;
+    talking.innerHTML = `
+      <div class="gf-who">${p.emoji} ${p.names[who()]}</div>
+      <p>${taken ? `"Your ${title()} won't mind if we chat, right? 😏"` : p.hi}</p>
+      ${taken ? `<small class="gf-warn">${partner().emoji} ${name()} is standing right there.</small>` : ''}
+      <div class="gf-lines">${lines.map(([l, k]) => `<button type="button" class="btn" data-line="${k}">${l}</button>`).join('')}</div>`;
+    document.querySelector('.stage')?.appendChild(talking);
+    talking.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-line]');
+      if (b) (taken ? tempted : answer)(b.dataset.line, p);
+    });
   }
 
-  /** Does the line land? Your outfit, your streak and your blood alcohol all get a vote. */
-  function answer(kind, p) {
+  function approach() {
+    if (state.dating || talking || her || Date.now() < state.nextTry) return;
+    // the one who slipped you their number goes first
+    const pool = eligible();
+    const p = pool.find((x) => x.id === state.backup) || pick(pool);
+    state.backup = null;
+    arrive(() => card(p, false), p.id);
+  }
+
+  /** Someone new tries their luck while you're taken (and your date is watching). */
+  function tempt() {
+    if (!state.dating || talking || other || her?.phase !== 'stay') return;
+    const p = pick(eligible(state.partner));
+    if (!p) return;
+    other = spawn(theirLook(p.id), START2, SPOT2, -0.4, () => card(p, true));
+  }
+
+  const lands = (kind, p) => {
     const drunk = booze.level();
     const me = look();
     let chance = 0.5;
@@ -248,7 +275,45 @@ export function createGirlfriend({ wheel, store, sound, toast, booze, look, leve
     if (drunk >= 3) chance -= 0.2; // slurring
     if (me.top !== 'tshirt' || me.hat) chance += 0.1; // made an effort
     if (p.taste === 'rich' && getBalance() < 5000) chance -= 0.2; // "that's all you've got?"
-    const yes = Math.random() < chance;
+    return Math.random() < chance;
+  };
+
+  /** Flirting while taken: loyal, caught (SLAP), or a number for later. */
+  function tempted(kind, p) {
+    talking.remove();
+    talking = null;
+    const them = p.names[who()];
+    if (kind === 'loyal') {
+      toast(`${p.emoji} ${them}: "Lucky them."`);
+      if (setLove(state.love + 8)) setTimeout(() => fromHer('saw that. good answer ❤️'), 1500);
+      react('wave');
+    } else if (!lands(kind, p)) {
+      toast(`${p.emoji} ${them}: "In front of your ${title()}? Wow."`);
+      if (setLove(state.love - 10)) setTimeout(() => fromHer('i saw you try. 🙄'), 1500);
+      react('facepalm');
+    } else if (Math.random() < 0.7) {
+      // caught.
+      const stage = document.querySelector('.stage');
+      stage?.classList.remove('shake-0');
+      void stage?.offsetWidth;
+      stage?.classList.add('shake-0');
+      sound.blip(120, 0.12, 'square', 0.14);
+      sound.blip(900, 0.05, 'square', 0.1, 0.02);
+      toast(`💥 *SLAP* ${name()} saw everything.`);
+      react('facepalm');
+      emit('girlfriend', { type: 'slapped', name: name() });
+      if (setLove(state.love - 35)) setTimeout(() => fromHer('WHO WAS THAT?? 😡'), 1200);
+    } else {
+      state.backup = p.id;
+      save();
+      toast(`${p.emoji} ${them}: "Call me when you're single. 😉" (A number appears in your pocket.)`);
+    }
+    setTimeout(() => walkOff(other), 700);
+  }
+
+  /** Does the line land? Your outfit, your streak and your blood alcohol all get a vote. */
+  function answer(kind, p) {
+    const yes = lands(kind, p);
     talking.remove();
     talking = null;
     state.met = true;
@@ -259,7 +324,7 @@ export function createGirlfriend({ wheel, store, sound, toast, booze, look, leve
       save();
       toast(`${p.emoji} ${name()} put ${words().their} number in your phone. You have a ${words().title}!`);
       react('wave');
-      emit('girlfriend', { type: 'yes' });
+      emit('girlfriend', { type: 'yes', name: name() });
       setTimeout(() => fromHer(pick(TEXTS.happy)), 4000);
       scheduleTexts();
     } else {
@@ -338,7 +403,7 @@ export function createGirlfriend({ wheel, store, sound, toast, booze, look, leve
 
   function dumped() {
     const wasMarried = state.married;
-    Object.assign(state, { dating: false, married: false, love: 0, gifts: {}, nextTry: Date.now() + DUMPED_MS });
+    Object.assign(state, { dating: false, married: false, love: 0, gifts: {}, nextTry: Date.now() + DUMPED_MS, ended: 'dumped' });
     save();
     clearTimeout(textTimer);
     if (wasMarried) {
@@ -351,7 +416,23 @@ export function createGirlfriend({ wheel, store, sound, toast, booze, look, leve
     sound.blip(330, 0.4, 'triangle', 0.08);
     sound.blip(262, 0.6, 'triangle', 0.08, 0.35);
     leave();
-    emit('girlfriend', { type: 'dumped' });
+    emit('girlfriend', { type: 'dumped', name: name() });
+  }
+
+  /** You end it. (Over text, like a coward. It's the only way the phone allows.) */
+  function breakUp() {
+    if (!state.dating) return;
+    const n = name();
+    const wasMarried = state.married;
+    state.thread = [...state.thread, { from: 'me', m: wasMarried ? 'i want a divorce.' : 'we need to talk. 💔', t: Date.now() }].slice(-60);
+    Object.assign(state, { dating: false, married: false, love: 0, gifts: {}, nextTry: Date.now() + BREAKUP_MS, lastRead: Date.now(), ended: 'breakup' });
+    save();
+    clearTimeout(textTimer);
+    tell('message');
+    setTimeout(() => fromHer(wasMarried ? "fine. i'm keeping the hotel room." : pick(['wow. ok. 💔', 'over TEXT?', 'i hope the wheel was worth it', 'enjoy dave.'])), 1500);
+    sound.blip(330, 0.4, 'triangle', 0.08);
+    leave();
+    emit('girlfriend', { type: 'breakup', name: n });
   }
 
   // ---------- dates, gifts, the ring ----------
@@ -369,7 +450,7 @@ export function createGirlfriend({ wheel, store, sound, toast, booze, look, leve
     flair.date({ me: look(), them: theirLook(), prop: d.prop }, () => {
       if (!setLove(state.love + delta)) return;
       fromHer(delta < 0 ? pick(['a kebab. really.', "i've had better dates with my accountant", 'next time: champagne.']) : pick([`${d.emoji} best date ever`, 'ok that was really fun 🥰', 'again tomorrow?', "you're full of surprises"]));
-      emit('girlfriend', { type: 'date' });
+      emit('girlfriend', { type: 'date', name: name() });
       react('wave');
     });
   }
@@ -400,7 +481,7 @@ export function createGirlfriend({ wheel, store, sound, toast, booze, look, leve
       save();
       tell('love');
       toast(`💍 You married ${name()}! Dave was the best man. Nobody invited him.`);
-      emit('girlfriend', { type: 'married' });
+      emit('girlfriend', { type: 'married', name: name() });
       setTimeout(() => fromHer('hi, spouse 🥹💍'), 2500);
     });
   }
@@ -416,6 +497,7 @@ export function createGirlfriend({ wheel, store, sound, toast, booze, look, leve
       if (e.net < 0 && getBalance() < 1) {
         if (setLove(state.love + LOVE.broke)) setTimeout(() => fromHer('babe. are you ok? 😬'), 2500);
       }
+      if (spins >= 3 && wins >= 2 && Math.random() < 0.25) setTimeout(tempt, 2200);
     } else if (spins >= 3 && wins >= 2 && Math.random() < 0.5) setTimeout(approach, 1800);
   });
   on('blackjack', (e) => {
@@ -435,6 +517,8 @@ export function createGirlfriend({ wheel, store, sound, toast, booze, look, leve
     met: () => state.met,
     dating: () => state.dating,
     married: () => !!state.married,
+    /** how it ended: 'dumped' (they did) or 'breakup' (you did) */
+    ended: () => state.ended || 'dumped',
     engaged: () => engaged,
     love: () => state.love,
     thread: () => state.thread,
@@ -446,6 +530,9 @@ export function createGirlfriend({ wheel, store, sound, toast, booze, look, leve
     date,
     gift,
     propose,
+    breakUp,
+    /** married? then they've moved in: { look, name, title } for the hotel room */
+    atHome: () => (state.dating && state.married ? { look: theirLook(), name: name(), title: title() } : null),
     /** the "who you date" setting changed: new clothes, same person */
     restyle: () => redress(),
     /** 'message' | 'typing' | 'read' | 'love' */

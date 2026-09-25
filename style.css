@@ -3653,3 +3653,9 @@ body.reduce-motion .hype { animation: none; }
 .st-opts .st-chip { padding: 5px 9px; font-size: 12px; }
 /* the wedding sign flies over everything, wherever you are */
 .hype.fixed { position: fixed; z-index: 59; }
+
+/* 💔 flirting while taken, and breaking up */
+.gf-talk.taken { border-color: rgba(255, 180, 60, 0.7); }
+.gf-warn { display: block; margin: -4px 0 10px; color: #ffb347; font-size: 12px; font-weight: 700; }
+.gf-act.breakup { flex: 0 0 auto; padding: 7px 10px; border-color: rgba(255, 255, 255, 0.2); background: rgba(255, 255, 255, 0.06); }
+.gf-act.breakup.sure { flex: 1 1 100%; background: #8a1024; border-color: #ff6b81; color: #fff; }
