@@ -5,6 +5,8 @@
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { buildTrophy, disposeTree } from './trophies3d.js';
+import { buildAvatar, animateAvatar, disposeAvatar } from './avatar.js';
+import { buildDave } from './dave.js';
 
 const rand = (a, b) => a + Math.random() * (b - a);
 
@@ -265,6 +267,58 @@ function copyOf(make) {
   return o;
 }
 const HEART_COLORS = [0xff2d6a, 0xff5fa2, 0xe0142c];
+
+// ---------- 💋 dates and a wedding ----------
+const std = (color, o = {}) => new THREE.MeshStandardMaterial({ color, roughness: 0.5, ...o });
+
+/** Something on the table, depending on the date. */
+function dateProp(kind) {
+  const g = new THREE.Group();
+  if (kind === 'bottle') {
+    const b = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.16, 0.7, 16), std(0x0f3d1e, { metalness: 0.3, roughness: 0.15 }));
+    b.position.y = 0.35;
+    const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.1, 0.28, 12), std(0xe8c35a, { metalness: 1, roughness: 0.3 }));
+    neck.position.y = 0.82;
+    const bucket = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.24, 0.4, 20, 1, true), std(0xd8dde3, { metalness: 1, roughness: 0.2, side: THREE.DoubleSide }));
+    bucket.position.y = 0.2;
+    g.add(b, neck, bucket);
+  } else if (kind === 'pasta') {
+    const bowl = new THREE.Mesh(new THREE.SphereGeometry(0.3, 20, 10, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), std(0xffffff, { side: THREE.DoubleSide }));
+    bowl.position.y = 0.3;
+    const pasta = new THREE.Mesh(new THREE.SphereGeometry(0.24, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), std(0xf2c14e, { roughness: 0.8 }));
+    pasta.position.y = 0.2;
+    g.add(bowl, pasta);
+  } else if (kind === 'kebab') {
+    const wrap = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.6, 16), std(0xe8c79a, { roughness: 0.9 }));
+    wrap.rotation.z = Math.PI;
+    wrap.position.y = 0.34;
+    const filling = new THREE.Mesh(new THREE.SphereGeometry(0.15, 12, 8), std(0x8a3a1a, { roughness: 0.9 }));
+    filling.position.y = 0.66;
+    g.add(wrap, filling);
+  } else {
+    // a tiny Dragon Rush cabinet
+    const cab = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.7, 0.3), std(0xb0106a));
+    cab.position.y = 0.35;
+    const screen = new THREE.Mesh(new THREE.PlaneGeometry(0.34, 0.26), new THREE.MeshBasicMaterial({ color: 0xffd23f }));
+    screen.position.set(0, 0.46, 0.151);
+    g.add(cab, screen);
+  }
+  return g;
+}
+
+function candle() {
+  const g = new THREE.Group();
+  const wax = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.3, 12), std(0xfff4d6));
+  wax.position.y = 0.15;
+  const flame = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 6), new THREE.MeshBasicMaterial({ color: 0xffb347 }));
+  flame.scale.y = 1.8;
+  flame.position.y = 0.36;
+  const light = new THREE.PointLight(0xffb347, 2.5, 3);
+  light.position.y = 0.5;
+  g.add(wax, flame, light);
+  g.userData.flame = flame;
+  return g;
+}
 
 const ease = (t) => 1 - Math.pow(1 - Math.min(1, Math.max(0, t)), 3);
 const lerp = (a, b, t) => a + (b - a) * t;
@@ -541,6 +595,134 @@ export function createFlair() {
     run();
   }
 
+  // a couple (and maybe a scene around them), popping in the middle of the screen
+  function couple({ me, them }) {
+    const g = new THREE.Group();
+    const a = buildAvatar(me);
+    const b = buildAvatar(them);
+    a.root.position.set(-1.35, 0, 0);
+    a.root.rotation.y = Math.PI / 2 - 0.35; // facing each other, a little towards you
+    b.root.position.set(1.35, 0, 0);
+    b.root.rotation.y = -Math.PI / 2 + 0.35;
+    g.add(a.root, b.root);
+    return { g, a, b };
+  }
+  function showScene(g, { secs, tick, onDone, cleanup }) {
+    ensure();
+    const size = Math.min(78, innerWidth / 11);
+    const at = { x: innerWidth / 2, y: innerHeight * 0.52 };
+    g.position.set(at.x, -at.y, 0);
+    g.rotation.x = 0.28;
+    g.scale.setScalar(0.001);
+    scene.add(g);
+    let k = 0;
+    tweens.push((dt) => {
+      k += dt;
+      const inK = ease(k / 0.5);
+      const out = k > secs - 0.45 ? ease((k - (secs - 0.45)) / 0.45) : 0;
+      g.scale.setScalar(size * inK * (1 - out) + 0.001);
+      g.rotation.y = Math.sin(k * 0.6) * 0.18;
+      tick(k, at);
+      if (k > secs) {
+        scene.remove(g);
+        cleanup();
+        disposeTree(g);
+        onDone?.();
+        return false;
+      }
+      return true;
+    });
+    run();
+  }
+
+  /** 💌 A date: the two of you at a candlelit table, with whatever the date was. */
+  function date({ me, them, prop }, onDone) {
+    const { g, a, b } = couple({ me, them });
+    const table = new THREE.Group();
+    const top = new THREE.Mesh(new THREE.CylinderGeometry(1.0, 1.0, 0.08, 32), std(0xf4ecdc));
+    const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.3, 1.3, 12), std(0x2a1a10));
+    leg.position.y = -0.68;
+    table.add(top, leg);
+    const c = candle();
+    c.position.set(-0.35, 0.04, -0.2);
+    const pr = dateProp(prop);
+    pr.position.set(0.25, 0.04, 0.1);
+    table.add(c, pr);
+    table.position.y = 0.05;
+    g.add(table);
+    let hearted = false;
+    showScene(g, {
+      secs: 4.6,
+      tick: (k, at) => {
+        const t = k + 10;
+        animateAvatar(a, t, { emote: k > 1.4 && k < 3.4 ? 'wave' : null });
+        animateAvatar(b, t + 1.3, { emote: k > 1.1 && k < 3.8 ? 'peace' : null });
+        c.userData.flame.scale.set(1 + Math.sin(k * 30) * 0.15, 1.8 + Math.sin(k * 23) * 0.3, 1);
+        if (!hearted && k > 1.2) {
+          hearted = true;
+          burst('heartsfx', { x: at.x, y: at.y - 60 }, 1);
+        }
+      },
+      onDone,
+      cleanup: () => (disposeAvatar(a), disposeAvatar(b)),
+    });
+  }
+
+  /** 💍 A Vegas wedding: a flower arch, the two of you, and Dave, who wasn't invited. */
+  function wedding({ me, them }, onDone) {
+    const { g, a, b } = couple({ me, them });
+    const white = std(0xffffff);
+    const arch = new THREE.Mesh(new THREE.TorusGeometry(2.3, 0.1, 10, 40, Math.PI), white);
+    arch.position.set(0, 0.2, -0.6);
+    g.add(arch);
+    for (let i = 0; i <= 14; i++) {
+      const ang = (i / 14) * Math.PI;
+      const f = new THREE.Mesh(new THREE.SphereGeometry(0.16, 10, 8), std([0xff8fb5, 0xffffff, 0xff3b6b][i % 3]));
+      f.position.set(Math.cos(ang) * 2.3, 0.2 + Math.sin(ang) * 2.3, -0.6);
+      g.add(f);
+    }
+    for (const x of [-2.3, 2.3]) {
+      const post = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 1.6, 12), white);
+      post.position.set(x, -0.6, -0.6);
+      g.add(post);
+    }
+    const aisle = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 4), std(0xc0182a, { side: THREE.DoubleSide }));
+    aisle.rotation.x = -Math.PI / 2;
+    aisle.position.set(0, -1.38, 0.8);
+    g.add(aisle);
+    // the best man. nobody asked him.
+    const dave = buildDave();
+    dave.root.scale.setScalar(0.85);
+    dave.root.position.set(3.4, -0.1, 0.4);
+    dave.root.rotation.y = -0.6;
+    g.add(dave.root);
+    const sign = document.createElement('div');
+    sign.className = 'hype fixed';
+    sign.innerHTML = '💍 JUST MARRIED <small>Vegas style · best man: Dave (uninvited)</small>';
+    let shown = false;
+    showScene(g, {
+      secs: 6.2,
+      tick: (k, at) => {
+        const t = k + 10;
+        // lean in for the kiss
+        a.root.position.x = -1.35 + Math.min(1, Math.max(0, (k - 1.6) / 0.8)) * 0.55;
+        b.root.position.x = 1.35 - Math.min(1, Math.max(0, (k - 1.6) / 0.8)) * 0.55;
+        animateAvatar(a, t, { emote: k > 3 ? 'wave' : null });
+        animateAvatar(b, t + 0.7, { emote: k > 3 ? 'wave' : null });
+        dave.armR.g.rotation.x = -2.4 + Math.sin(k * 8) * 0.3; // CHEERS 🍺
+        if (!shown && k > 2.4) {
+          shown = true;
+          document.body.appendChild(sign);
+          setTimeout(() => sign.remove(), 2600);
+          burst('heartsfx', { x: at.x, y: at.y - 80 }, 2);
+          burst('fireworks', at, 2);
+        }
+      },
+      onDone,
+      cleanup: () => (disposeAvatar(a), disposeAvatar(b)),
+    });
+  }
+
   /** ⭐ A gold medal with your new level spins up in the middle of the screen. */
   function levelUp(level) {
     ensure();
@@ -644,5 +826,5 @@ export function createFlair() {
   const idle = window.requestIdleCallback || ((fn) => setTimeout(fn, 3000));
   idle(() => ensure(), { timeout: 8000 });
 
-  return { burst, cashOut, levelUp, trophy, stampCard };
+  return { burst, cashOut, levelUp, trophy, stampCard, date, wedding };
 }

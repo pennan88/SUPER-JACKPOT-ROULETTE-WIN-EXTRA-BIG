@@ -25,7 +25,7 @@ import { createMap } from './map.js';
 import { createBank } from './bank.js';
 import { createBlackjack } from './blackjack.js';
 import { createTableLife } from './tablelife.js';
-import { createGirlfriend } from './girlfriend.js';
+import { createGirlfriend, WHO } from './girlfriend.js';
 
 const rand = (a, b) => a + Math.random() * (b - a);
 
@@ -1171,6 +1171,17 @@ const settings = createSettings({
       },
     },
     {
+      id: 'dating',
+      label: '💋 Who you date',
+      desc: 'Girlfriend, boyfriend or partner: changes the names, looks and words.',
+      options: WHO,
+      get: () => store.get('fr.gf.who', 'her'),
+      set: (v) => {
+        store.set('fr.gf.who', v);
+        gf?.restyle();
+      },
+    },
+    {
       id: 'motion',
       label: '🌀 Reduce motion',
       desc: 'No screen shake, drunk swaying or walking head-bob.',
@@ -1298,8 +1309,26 @@ const courier = createCourier({ wheel, dave });
 
 // ---------- 🧓🔥🛸 Grandma, being on fire, and the occasional UFO ----------
 const life = createTableLife({ wheel, store, toast, sound, getBalance: () => balance, take: takeChips, give: giveChips, onUfo: () => emit('ufo') });
-// ---------- 💋 Scarlett (win a couple of spins and she comes over) ----------
-const gf = createGirlfriend({ wheel, store, sound, toast, booze, look: () => settings.look(), getBalance: () => balance });
+// ---------- 💋 your date (win a couple of spins and someone comes over) ----------
+const gf = createGirlfriend({
+  wheel,
+  store,
+  sound,
+  toast,
+  booze,
+  flair,
+  wallet,
+  look: () => settings.look(),
+  level: () => levels.level(),
+  getBalance: () => balance,
+  // dates are paid in chips
+  spend: (v) => {
+    if (spinning || balance < v) return false;
+    balance -= v;
+    render();
+    return true;
+  },
+});
 
 phone = createPhone({
   gf,

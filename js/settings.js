@@ -144,8 +144,11 @@ export function createSettings({ store, sound, toast, wallet, levels, goals, pre
 
   function prefsHtml() {
     return `<div class="st-prefs">${prefs
-      .map(
-        (p) => `<label class="st-pref">
+      .map((p) =>
+        p.options
+          ? `<div class="st-pref"><span><b>${p.label}</b><small>${p.desc}</small></span>
+          <div class="st-opts">${p.options.map(([v, l]) => `<button type="button" class="st-chip${p.get() === v ? ' on' : ''}" data-pref-opt="${p.id}" data-val="${v}">${l}</button>`).join('')}</div></div>`
+          : `<label class="st-pref">
           <span><b>${p.label}</b><small>${p.desc}</small></span>
           <input type="checkbox" data-pref="${p.id}" ${p.get() ? 'checked' : ''}><i class="st-switch"></i>
         </label>`
@@ -220,7 +223,11 @@ export function createSettings({ store, sound, toast, wallet, levels, goals, pre
 
   // ---------- taps ----------
   function click(t) {
-    if (tab === 'goals' && goals.input(t)) {
+    if (t.dataset.prefOpt) {
+      prefs.find((p) => p.id === t.dataset.prefOpt)?.set(t.dataset.val);
+      sound.blip(1000, 0.05, 'triangle', 0.08);
+      redraw();
+    } else if (tab === 'goals' && goals.input(t)) {
       redraw();
     } else if (t.dataset.set) {
       setLook({ [t.dataset.set]: t.dataset.val || null });

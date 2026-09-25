@@ -5,6 +5,7 @@
 import * as THREE from 'three';
 import { PhoneOverlay, SelfieCam, SCREEN_PX } from './phone3d.js';
 import { REPLIES, buildDave } from './dave.js';
+import { DATES, GIFTS, RING, PROPOSE_AT } from './girlfriend.js';
 import { WALLPAPERS, playRingtone } from './skins.js';
 import { CATALOG } from './avatar.js';
 import { emit } from './events.js';
@@ -169,6 +170,7 @@ export function createPhone({ button, store, sound, toast, booze, dave, gf, hang
   let chatWith = 'dave'; // whose messages you're reading: 'dave' or 'gf'
   let gfTyping = false;
   let gfChips = null;
+  let gfMenu = null; // 'date' | 'gift' | null: the menu open under their thread
 
   // ---------- the button in the top bar ----------
   const badge = () => {
@@ -335,7 +337,7 @@ export function createPhone({ button, store, sound, toast, booze, dave, gf, hang
   function threadTabs() {
     if (!gf.met() || !dave.met()) return '';
     const tab = (id, label, n) => `<button type="button" class="msg-tab${chatWith === id ? ' on' : ''}" data-thread="${id}">${label}${n ? ` <b>${n}</b>` : ''}</button>`;
-    return `<div class="msg-tabs">${tab('dave', 'Dave 🍺', dave.unread())}${tab('gf', `${gf.name} 💋`, gf.unread())}</div>`;
+    return `<div class="msg-tabs">${tab('dave', 'Dave 🍺', dave.unread())}${tab('gf', `${gf.name()} ${gf.emoji()}`, gf.unread())}</div>`;
   }
 
   function bubblesHtml(list, mine) {
@@ -353,13 +355,25 @@ export function createPhone({ button, store, sound, toast, booze, dave, gf, hang
     const list = gf.thread();
     const last = list[list.length - 1];
     const love = gf.love();
-    const sub = gfTyping ? 'typing…' : gf.dating() ? `❤️ ${love}%` : '💔 dumped you';
+    const sub = gfTyping ? 'typing…' : gf.dating() ? `${gf.married() ? '💍 ' : ''}your ${gf.title()} · ❤️ ${love}%` : '💔 dumped you';
+    const menu =
+      gfMenu === 'date'
+        ? `<div class="gf-menu">${DATES.map((d) => `<button type="button" class="gf-opt" data-gdate="${d.id}"><span>${d.emoji}</span><b>${d.name}</b><em>${d.cost ? money(d.cost) : 'free'}</em></button>`).join('')}</div>`
+        : gfMenu === 'gift'
+        ? `<div class="gf-menu">${GIFTS.map((g) => `<button type="button" class="gf-opt${gf.gifts()[g.slot] === g.id ? ' worn' : ''}" data-ggift="${g.id}"><span>${g.emoji}</span><b>${g.name}</b><em>👛 ${money(g.price)}</em></button>`).join('')}</div>`
+        : `<div class="msg-chips">${gfChips.map((c) => `<button type="button" class="msg-chip ${c.kind === 'sweet' ? 'nice' : c.kind === 'cold' ? 'mean' : 'weird'}" data-greply="${c.kind}" data-m="${esc(c.m)}">${esc(c.m)}</button>`).join('')}</div>`;
+    const canPropose = !gf.married() && !gf.engaged() && love >= PROPOSE_AT;
+    const actions = `<div class="gf-actions">
+        <button type="button" class="gf-act${gfMenu === 'date' ? ' on' : ''}" data-gmenu="date">💌 Date</button>
+        <button type="button" class="gf-act${gfMenu === 'gift' ? ' on' : ''}" data-gmenu="gift">🎁 Gift</button>
+        ${canPropose ? `<button type="button" class="gf-act ring" data-gpropose>💍 Propose · 👛 ${money(RING)}</button>` : ''}
+      </div>`;
     return `
-      ${header(`${gf.name} 💋`, sub)}
+      ${header(`${gf.name()} ${gf.emoji()}`, sub)}
       ${threadTabs()}
       ${gf.dating() ? `<div class="gf-meter"><i style="width:${love}%"></i></div>` : ''}
       <div class="msg-list">${bubblesHtml(list, 'me')}${last?.from === 'me' ? '<div class="msg-seen">Delivered</div>' : ''}${gfTyping ? '<div class="msg them typing"><i></i><i></i><i></i></div>' : ''}</div>
-      ${gf.dating() ? `<div class="msg-chips">${gfChips.map((c) => `<button type="button" class="msg-chip ${c.kind === 'sweet' ? 'nice' : c.kind === 'cold' ? 'mean' : 'weird'}" data-greply="${c.kind}" data-m="${esc(c.m)}">${esc(c.m)}</button>`).join('')}</div>` : ''}`;
+      ${gf.dating() ? actions + menu : ''}`;
   }
 
   function messagesHtml() {
@@ -553,6 +567,25 @@ export function createPhone({ button, store, sound, toast, booze, dave, gf, hang
       if (chatWith === 'gf') gf.markRead();
       else dave.markRead();
       sound.blip(1200, 0.03, 'sine', 0.05);
+      return render();
+    }
+    if (t.dataset.gmenu) {
+      gfMenu = gfMenu === t.dataset.gmenu ? null : t.dataset.gmenu;
+      sound.blip(1100, 0.03, 'sine', 0.05);
+      return render();
+    }
+    if (t.dataset.gdate) {
+      gfMenu = null;
+      gf.date(t.dataset.gdate);
+      return render();
+    }
+    if (t.dataset.ggift) {
+      gfMenu = null;
+      gf.gift(t.dataset.ggift);
+      return render();
+    }
+    if (t.dataset.gpropose != null) {
+      gf.propose();
       return render();
     }
     if (t.dataset.greply) {

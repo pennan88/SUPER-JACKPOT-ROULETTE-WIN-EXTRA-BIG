@@ -3857,3 +3857,19 @@ body.reduce-motion .hype { animation: none; }
 .msg-tab b { display: inline-block; min-width: 16px; padding: 0 4px; border-radius: 99px; background: #ff3b30; color: #fff; font-size: 10px; }
 .gf-meter { height: 5px; margin: 8px 14px 0; border-radius: 99px; background: rgba(255, 255, 255, 0.12); overflow: hidden; }
 .gf-meter i { display: block; height: 100%; background: linear-gradient(90deg, #ff3b6b, #ff8fb5); transition: width 0.4s; }
+
+/* 💌 dates, gifts and the ring, under their thread */
+.gf-actions { display: flex; gap: 6px; padding: 8px 12px 0; flex-wrap: wrap; }
+.gf-act { flex: 1; padding: 7px 8px; border-radius: 12px; border: 1px solid rgba(255, 143, 181, 0.45); background: rgba(255, 90, 140, 0.12); color: inherit; font-size: 12.5px; font-weight: 800; white-space: nowrap; }
+.gf-act.on { background: rgba(255, 90, 140, 0.35); }
+.gf-act.ring { flex-basis: 100%; background: linear-gradient(90deg, #e8c35a, #ffdf7a); color: #2a1a03; border-color: #fff4d6; animation: glPulse 1.2s ease-in-out infinite; }
+.gf-menu { display: flex; flex-direction: column; gap: 5px; padding: 8px 12px 10px; max-height: 190px; overflow-y: auto; }
+.gf-opt { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 8px; padding: 7px 10px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.12); background: rgba(255, 255, 255, 0.05); color: inherit; text-align: left; font-size: 13px; }
+.gf-opt span { font-size: 18px; }
+.gf-opt em { font-style: normal; font-weight: 800; color: #ffdf7a; font-size: 12px; }
+.gf-opt.worn { border-color: rgba(94, 224, 143, 0.6); }
+.gf-opt.worn em::after { content: ' ✓'; color: var(--pos); }
+.st-opts { display: flex; gap: 5px; flex: none; }
+.st-opts .st-chip { padding: 5px 9px; font-size: 12px; }
+/* the wedding sign flies over everything, wherever you are */
+.hype.fixed { position: fixed; z-index: 59; }
