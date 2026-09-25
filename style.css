@@ -3677,6 +3677,93 @@ body.high-roller { --felt: #7a1428; --felt-dark: #4a0816; }
 body.whale-mode .stack { scale: 2.1; }
 body.whale-mode .fly-chip { scale: 1.9; }
 
+/* ================= 🃏 BLACKJACK ================= */
+html:has(> body.in-blackjack) { overflow: hidden; }
+/* the room sits under the top bar (like the slots), so the phone, wallet and settings still work */
+.bj { position: fixed; inset: 0; z-index: 55; background: #0c0410; opacity: 0; transition: opacity 0.35s; }
+.bj.on { opacity: 1; }
+.bj-stage { position: absolute; inset: 0; }
+.bj-stage canvas { display: block; width: 100%; height: 100%; }
+/* the table's sign: a lit plaque, like the slots' marquee */
+.bj-title {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  z-index: 2;
+  padding: 10px 18px 9px;
+  border-radius: 14px;
+  text-align: center;
+  pointer-events: none;
+  background: linear-gradient(180deg, #1c0a10, #0b0507);
+  border: 2px solid #e8c35a;
+  box-shadow: 0 0 0 4px rgba(232, 195, 90, 0.15), 0 10px 30px rgba(0, 0, 0, 0.6), inset 0 0 22px rgba(232, 195, 90, 0.18);
+}
+.bj-title b { display: block; font-family: Cinzel, serif; font-size: 26px; line-height: 1.1; letter-spacing: 0.1em; background: linear-gradient(180deg, #fff6d8, #e8c35a 55%, #a8741e); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 2px 0 #3a2106); }
+.bj-title small { display: block; margin-top: 3px; color: rgba(255, 244, 214, 0.75); font-size: 11.5px; letter-spacing: 0.04em; }
+.bj-labels { position: absolute; inset: 0; pointer-events: none; z-index: 2; }
+.bj-total { position: absolute; left: 0; top: 0; padding: 4px 11px; border-radius: 99px; background: rgba(10, 6, 8, 0.82); border: 1px solid rgba(232, 195, 90, 0.5); color: #fff4d6; font-weight: 800; font-size: 15px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.bj-total.on { border-color: #2de0ff; box-shadow: 0 0 0 3px rgba(45, 224, 255, 0.3); }
+.bj-total.bust { background: #8a1024; border-color: #ff6b81; }
+.bj-total.bj { background: linear-gradient(90deg, #e8c35a, #ffdf7a); color: #2a1a03; border-color: #fff4d6; }
+.bj-total.small { font-size: 12.5px; padding: 3px 9px; }
+/* the other players: a name over their head, and their own speech bubbles */
+.bj-name { position: absolute; left: 0; top: 0; padding: 2px 9px; border-radius: 99px; background: rgba(10, 6, 8, 0.72); color: #ffe9a8; font-size: 11.5px; font-weight: 700; white-space: nowrap; pointer-events: none; }
+.bj-bubble.bot { max-width: 190px; padding: 6px 11px; font-size: 12.5px; border-radius: 12px; background: #fff8e6; }
+.bj-bubble.bot::after { border-top-color: #fff8e6; }
+/* the dealer's speech bubble */
+.bj-bubble { position: absolute; left: 0; top: 0; z-index: 3; max-width: 260px; padding: 9px 14px; border-radius: 14px; background: #fff; color: #1a1a1a; font-size: 14px; font-weight: 600; box-shadow: 0 8px 22px rgba(0, 0, 0, 0.45); opacity: 0; transition: opacity 0.25s; pointer-events: none; }
+.bj-bubble::after { content: ""; position: absolute; left: 50%; bottom: -8px; translate: -50% 0; border: 8px solid transparent; border-top-color: #fff; border-bottom: 0; }
+.bj-bubble.on { opacity: 1; }
+.bj-banner { position: absolute; left: 50%; top: 40%; z-index: 3; translate: -50% -50%; font-family: Cinzel, serif; font-weight: 900; font-size: clamp(30px, 6vw, 64px); color: #fff4d6; text-shadow: 0 4px 20px #000, 0 0 30px rgba(232, 195, 90, 0.6); white-space: nowrap; opacity: 0; scale: 0.6; transition: opacity 0.25s, scale 0.35s cubic-bezier(0.3, 1.6, 0.5, 1); pointer-events: none; }
+.bj-banner.on { opacity: 1; scale: 1; }
+.bj-banner.win { color: #ffdf7a; }
+.bj-banner.lose { color: #ff8a9a; }
+/* the bar along the bottom: money, chips, what you can do */
+.bj-bar { position: absolute; left: 50%; bottom: 14px; translate: -50% 0; z-index: 3; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; justify-content: center; width: min(900px, calc(100% - 24px)); padding: 10px 14px; border-radius: 18px; background: rgba(10, 6, 8, 0.85); border: 1px solid rgba(232, 195, 90, 0.35); backdrop-filter: blur(4px); }
+.bj-money { display: flex; gap: 14px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+.bj-money b { display: block; font-size: 18px; letter-spacing: 0; color: #fff4d6; font-variant-numeric: tabular-nums; }
+.bj-money span:last-child b { color: var(--gold); }
+.bj-chips { display: flex; gap: 8px; }
+.bj-chips[hidden] { display: none; }
+.bj-chip { width: 46px; height: 46px; padding: 0; font-weight: 900; font-size: 13px; cursor: pointer; transition: translate 0.12s; }
+.bj-chip:hover { translate: 0 -4px; }
+.bj-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: center; }
+.bj-actions .btn { min-width: 84px; padding: 10px 14px; font-weight: 800; }
+.bj-actions .bj-deal { min-width: 120px; font-size: 17px; letter-spacing: 0.08em; }
+.bj-actions .bj-hit { background: #1f9d4c; color: #fff; }
+.bj-actions .bj-stand { background: #c0182a; color: #fff; }
+.bj-q { color: #fff4d6; font-weight: 700; font-size: 14px; }
+@media (max-width: 640px) {
+  .bj-title b { font-size: 16px; }
+  .bj-title small { display: none; }
+  .bj-title { top: 10px; right: 10px; padding: 6px 10px; }
+  .bj-bar { gap: 10px; bottom: 10px; }
+  .bj-chip { width: 40px; height: 40px; }
+  .bj-actions .btn { min-width: 70px; padding: 9px 10px; }
+}
+
+/* 🃏 blackjack extras: hands, side bets, tipping, heat, the waiter, high limit */
+.bj-extras { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
+.bj-extras[hidden] { display: none; }
+.bj-pill { padding: 7px 12px; border-radius: 99px; border: 1px solid rgba(232, 195, 90, 0.4); background: rgba(255, 255, 255, 0.05); color: #fff4d6; font-size: 12.5px; font-weight: 700; white-space: nowrap; }
+.bj-pill:hover { background: rgba(232, 195, 90, 0.15); }
+.bj-pill.on { background: rgba(232, 195, 90, 0.25); border-color: #e8c35a; color: #ffe9a8; }
+.bj-pill.tip { border-color: rgba(255, 110, 160, 0.5); }
+.bj-heat { display: block; margin-top: 6px; font-size: 12px; font-weight: 800; letter-spacing: 0.08em; color: rgba(255, 244, 214, 0.65); }
+.bj-heat.hot { color: #ffb347; text-shadow: 0 0 10px rgba(255, 120, 20, 0.8); }
+.bj-heat.cold { color: #8fc8ff; text-shadow: 0 0 10px rgba(80, 150, 255, 0.7); }
+.bj-name.staff { background: rgba(20, 20, 26, 0.85); color: #fff; border: 1px solid rgba(255, 255, 255, 0.3); }
+.bj-name.boss { background: #8a1024; color: #fff; border-color: #ff6b81; }
+.bj-offer { position: absolute; left: 0; top: 0; z-index: 4; display: flex; gap: 6px; }
+.bj-offer .btn { padding: 7px 12px; font-size: 13px; font-weight: 800; }
+/* the high-limit table: burgundy and gold */
+.bj.high-limit .bj-title { border-color: #ffdf7a; background: linear-gradient(180deg, #3a0612, #14030a); }
+.bj.high-limit .bj-bar { border-color: rgba(255, 223, 122, 0.55); }
+/* a few drinks in, the table gets a little blurry */
+body.drunk-2 .bj-stage canvas { filter: blur(0.5px); }
+body.drunk-3 .bj-stage canvas { filter: blur(1.1px) saturate(1.2); }
+body.drunk-4 .bj-stage canvas { filter: blur(2px) saturate(1.35); }
+
 /* ============ ✨ DRAGON RUSH SPECIAL MARKERS ============ */
 /* floating captions over cells: CRACK!, +2 SPINS, fortunes… */
 .dr-pop.note { font-size: 24px; }

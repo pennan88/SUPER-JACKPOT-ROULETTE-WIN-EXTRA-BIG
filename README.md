@@ -171,7 +171,7 @@ Drink the $5 water to feel fine, or put your sunglasses on and go back to the ca
 ### 📱 YOUR PHONE
 Tap **📱 Phone** in the top bar (or press `P`) and a **3D phone** rises into your hand, tilting as you move. Its screen is fully clickable, and everything lives on it: the map, the bank, your style, the store, your goals, the settings and the roadmap.
 
-- **🗺️ Map**: the whole casino floor as a little **3D diorama**: the roulette table with its wheel spinning, the Dragon Rush cabinets flashing, Dave hanging around, and **you**, as your own character, with a bouncing arrow over your head. It swoops in from above, drifts, and you can drag it to look around. Tap a room and a beam of light marks it; hit **Go ➜** and you walk there along a glowing trail, then the phone goes away and you're in. The 🃏 blackjack table is already on the floor too, behind a velvet rope: coming soon™.
+- **🗺️ Map**: the whole casino floor as a little **3D diorama**: the roulette table with its wheel spinning, the Dragon Rush cabinets flashing, Dave hanging around, and **you**, as your own character, with a bouncing arrow over your head. It swoops in from above, drifts, and you can drag it to look around. Tap a room and a beam of light marks it; hit **Go ➜** and you walk there along a glowing trail, then the phone goes away and you're in. The 🃏 blackjack table is on the floor too.
 - **🏦 Bank**: your casino chips and your wallet, cashing out, and adding fake funds (below).
 
 - **💬 Messages**: your whole conversation with Dave, and a proper phone **text tone** every time he writes. Reply with one tap and watch his **mood** (🥰 → 😐 → 😤): be nice and he sends you a drink (or, once in a blue moon, some of your money back). Ask "who is this?" and he floods you with *ITS DAVE*. Be mean enough and he texts **"omw 😤"**, closes your phone, storms onto your table **red-faced with steam coming out of his ears**, takes your chips "as interest" or pours his beer over the table (it's sticky now), and refuses to leave until you text him **"sorry dave 🥺"**. Leave him on read and he notices.
@@ -186,6 +186,22 @@ Your face is the **Style** app on your phone. Style, Store and Goals all open wi
 - **🛍️ Store**: hats (party hat, traffic cone, cowboy, top hat, Dave's tie, a $5,000 crown…), glasses, necklaces and outfits up to a $25,000 solid gold suit, plus phone cases, wallpapers, ringtones, win styles and selfie emotes. Try anything on for free before you buy. The store only takes **wallet** money, and the fancier items need a **level**.
 - **⚙️ Settings**: sound, music, Dave's text banners, and **reduce motion** (no screen shake, drunk swaying or head-bob).
 
+### 🃏 BLACKJACK
+Open the **🗺️ Map** on your phone and walk to **🃏 Blackjack** for a 3D blackjack room, dealt by a very smug dealer in a tux (built with the same character creator as you). Six decks, **blackjack pays 3 to 2**, the dealer **stands on all 17s**, double down on any two cards, split once, and insurance when the dealer shows an ace ("insurance against *what*, exactly?").
+
+Pick your chips, press **DEAL**, then **Hit**, **Stand**, **Double**, **Split** or **Surrender** (or **H**, **S**, **D**, **X**, **R** on the keyboard; **Space** deals). The top bar stays, so your phone works at the table too: walk back out on the map (or press **Esc** between hands).
+
+- **✋ Up to three hands at once**, dealt in turn (and split up to three hands in total).
+- **🎲 Side bets**: **Perfect Pairs** (mixed 5×, coloured 12×, perfect 25×) and **21+3**, your two cards plus the dealer's up card as a poker hand (flush 5×, straight 10×, three of a kind 30×, straight flush 40×, suited trips 100×).
+- **💝 Tip the dealer** and he's lovely for a few hands. Win big without tipping and he'll remember it.
+- **🔥 Hot and cold tables**: the heat meter on the sign fills as you win (or drains as you lose); the felt glows orange or blue, the regulars cheer when it's hot, and a **hot table gives ×1.5 XP**.
+- **🍸 The waiter** drops by with a free drink now and then. A few drinks in, the table gets blurry and the regulars get chatty.
+- **The regulars have opinions about you**: hit a 14 against a dealer's 5 and Big Tony will tell you you took the dealer's bust card. Get a big win and Grandma Edna might slide you $5.
+- **🥂 High-limit blackjack** (a level 12 perk, switch it on in 📱 → 🏆 Goals): burgundy felt, Madame Vivienne dealing, regulars betting 10×, $500 minimum, ×1.5 XP.
+- **🧮 Card counting**: the casino keeps a Hi-Lo count (2–6 are +1, tens and aces −1). Bet big whenever the count is high and the **pit boss** will walk over, compliment your maths and escort you back to roulette. No blackjack for 90 seconds, and a trophy for your trouble.
+
+You're not alone: up to four other players sit around the table, and they **come and go** between hands. Crypto Kevin (buying the dip), Grandma Edna (always hits on 16), Big Tony, Tourist Tim, Chad (only doubles), Sweaty Steve (that was the rent), Dave's cousin Rob and friends each bet, get dealt in turn, play their own hand in their own (questionable) style, and have something to say about it. The dealer has opinions about every move, dabs when he gets blackjack and facepalms when you do. Hands earn XP like spins, and there are blackjack challenges and four new trophies: **Natural**, **Five Card Charlie**, **Perfect Pair** and **Counted Out**.
+
 ### 👛 THE WALLET & ⭐ LEVELS
 Fake cards buy chips, not crowns. The store only takes money from your **👛 wallet** (top bar; tap it to open the 🏦 Bank), and you fill it by **cashing out** casino chips in the Bank at **$10 in chips = $1 in the wallet**, up to a **daily limit** of wallet money ($300 at level 1, +$100 per level, resets at midnight). Watch the bills fly into a 3D leather wallet.
 
@@ -195,9 +211,9 @@ Every bet you make (one spin, on roulette or the slots) earns **XP**. Bigger bet
 Your phone has a **🏆 Goals** app:
 
 - **Daily challenges**: three a day (the same three for everyone), like *hit a straight-up number*, *win 2 spins in a row*, *order bottle service* or *lose 5 spins (we believe in you)*. Each pays XP and wallet money; finish all three for a bonus.
-- **Achievements**: twelve of them, from *Beginner's Luck* to *Whale Watching* ($10,000 on one spin). Each one spins onto the screen as a **3D trophy** and then stands on the **trophy shelves** behind your character.
+- **Achievements**: sixteen of them, from *Beginner's Luck* to *Whale Watching* ($10,000 on one spin). Each one spins onto the screen as a **3D trophy** and then stands on the **trophy shelves** behind your character.
 - **🎟️ Loyalty card**: one stamp for every $100 you lose. Fill all ten and redeem it: a rubber stamp slams down **REDEEMED**, the card flips over, and your prize is… **nothing**. Thank you for your loyalty.
-- **Level perks**: **🛋️ VIP booth** at level 5 (bottle service 20% off), **🎩 High-roller table** at level 10 (red velvet felt and velvet ropes around the wheel, minimum $100 a spin, ×1.5 XP) and **🐋 Whale mode** at level 15 (enormous chips and an inflatable whale bobbing behind the wheel, minimum $1,000 a spin, ×2 XP). Switch the last two on and off whenever you like.
+- **Level perks**: **🛋️ VIP booth** at level 5 (bottle service 20% off), **🎩 High-roller table** at level 10 (red velvet felt and velvet ropes around the wheel, minimum $100 a spin, ×1.5 XP), **🥂 High-limit blackjack** at level 12 (burgundy felt, a new dealer, $500 minimum, ×1.5 XP) and **🐋 Whale mode** at level 15 (enormous chips and an inflatable whale bobbing behind the wheel, minimum $1,000 a spin, ×2 XP). Switch the last three on and off whenever you like.
 
 ### 📺 WATCH AN AD, GET $100
 Completely broke? At exactly **$0** with nothing on the table, a **Watch ad: +$100** button appears. Enjoy a message from our totally real sponsors: Hot Singles (they're dice), Waiter Academy™, Grandma's Cookies, Download More Money.biz and friends. It's "Ad 1 of 1"… until it becomes **Ad 2 of 1**. The skip button counts down, then refuses. After 15 seconds, claim your $100.
@@ -231,7 +247,7 @@ On narrow screens the table flips vertical: 0 on top, numbers running down the s
 
 ### 🧪 Also maybe, possibly, who knows
 
-- 🃏 **Blackjack table** in the corner, dealt by a suspiciously smug dealer
+- ~~🃏 **Blackjack table** in the corner, dealt by a suspiciously smug dealer~~ ✅ **SHIPPED**
 - 🏆 **Leaderboard of Shame**, ranked by the biggest fake money lost in a single spin
 - 🐔 **Chicken mode**, where the ball is replaced with a tiny rubber chicken. Pays the same. Sounds worse.
 - ~~🍸 **Free drinks**, a waiter who walks past every 30 seconds and never stops at your table~~ ✅ **SHIPPED**
@@ -334,6 +350,8 @@ js/flair3d.js         the 3D overlay: win styles, the cash-out wallet, level-up 
 js/goals.js           daily challenges, achievements, the loyalty card, level perks
 js/events.js          a tiny event bus (spins, drinks, selfies…) the goals listen to
 js/trophies3d.js      the 3D trophies and the shelves behind your character
+js/blackjack.js       BLACKJACK: the rules, the chips, the dealer's opinions
+js/blackjack3d.js     the 3D blackjack room: table, shoe, cards, chips, the smug dealer
 js/perks3d.js         the high-roller velvet ropes and felt, and the inflatable whale
 js/ads.js             the totally real sponsors ($100 for the broke)
 js/slots.js           DRAGON RUSH WIN BIG: tumbles, markers, free spins, buy bonus, autoplay

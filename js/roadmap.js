@@ -7,7 +7,7 @@ const HEADLINERS = [
   { id: 'funny', icon: '🤡', title: 'OTHER FUNNY STUFF', desc: "You'll know it when you see it.", tag: 'guaranteed', pct: 100 },
 ];
 const MAYBES = [
-  ['🃏', 'Blackjack table in the corner, dealt by a suspiciously smug dealer', 'maybe'],
+  ['🃏', 'Blackjack table in the corner, dealt by a suspiciously smug dealer', 'LIVE ✅'],
   ['🏆', 'Leaderboard of Shame, ranked by the biggest fake loss in one spin', 'someday'],
   ['🐔', 'Chicken mode: the ball is a tiny rubber chicken. Pays the same. Sounds worse.', 'please'],
   ['🍸', 'Free drinks: a waiter walks past every 30 seconds and never stops at your table', 'LIVE ✅'],
@@ -26,7 +26,7 @@ const MAYBES = [
   ['🔁', 'Martingale button: doubles your bet after every loss until the heat death of the universe', 'dangerous'],
   ['🎤', 'Hype announcer who screams "HE\'S ON FIRE" after two wins in a row', 'if bored'],
   ['🎁', 'Daily login bonus of $1, delivered via a 30-second unskippable animation', 'LIVE ✅'],
-  ['🐋', 'Whale mode: 10× bigger chips and a velvet rope around the table', 'someday'],
+  ['🐋', 'Whale mode: 10× bigger chips and a velvet rope around the table', 'LIVE ✅'],
   ['🛸', 'Alien abduction: a UFO beams your chips away (it\'s in the T&Cs)', 'classified'],
   ['🎮', 'Controller support, because roulette on a gamepad is how nature intended', 'maybe'],
   ['🥚', 'Easter eggs we will absolutely forget where we hid', 'already lost'],

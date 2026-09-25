@@ -23,6 +23,11 @@ export const CHALLENGES = [
   { id: 'cashout', emoji: '👛', text: 'Cash out to your wallet', goal: 1, on: 'cashout', xp: 50, cash: 10 },
   { id: 'shop', emoji: '🛍️', text: 'Buy something in the store', goal: 1, on: 'buy', xp: 60, cash: 10 },
   { id: 'freespins', emoji: '✨', text: 'Trigger free spins on the slots', goal: 1, on: 'freespins', xp: 120, cash: 30 },
+  { id: 'bj3', emoji: '🃏', text: 'Win 3 hands of blackjack', goal: 3, on: 'spin', test: (e) => e.game === 'blackjack' && e.net > 0, xp: 90, cash: 20 },
+  { id: 'natural', emoji: '🂡', text: 'Get a blackjack', goal: 1, on: 'blackjack', test: (e) => e.type === 'natural', xp: 130, cash: 35 },
+  { id: 'doubled', emoji: '✌️', text: 'Win a blackjack hand you doubled down on', goal: 1, on: 'blackjack', test: (e) => e.type === 'double', xp: 110, cash: 25 },
+  { id: 'sidebet', emoji: '🎲', text: 'Win a blackjack side bet (Pairs or 21+3)', goal: 1, on: 'blackjack', test: (e) => e.type === 'sidebet', xp: 120, cash: 30 },
+  { id: 'tipper', emoji: '💝', text: 'Tip the blackjack dealer', goal: 1, on: 'blackjack', test: (e) => e.type === 'tip', xp: 50, cash: 10 },
 ];
 const SWEEP = { xp: 100, cash: 50 }; // all three done
 
@@ -40,6 +45,10 @@ export const ACHIEVEMENTS = [
   { id: 'regular', name: 'Regular', desc: 'Finish 10 daily challenges', kind: 'cup', tier: 'gold', on: 'challenge', goal: 10 },
   { id: 'loyal', name: 'Loyal Customer', desc: 'Redeem a full loyalty card', kind: 'cup', tier: 'silver', on: 'loyalty' },
   { id: 'level10', name: 'High Roller', desc: 'Reach level 10', kind: 'crown', tier: 'gold', on: 'level', test: (e) => e.level >= 10 },
+  { id: 'natural', name: 'Natural', desc: 'Get a blackjack', kind: 'chip', tier: 'silver', on: 'blackjack', test: (e) => e.type === 'natural' },
+  { id: 'charlie', name: 'Five Card Charlie', desc: 'Win a blackjack hand with 5 or more cards', kind: 'star', tier: 'gold', on: 'blackjack', test: (e) => e.type === 'charlie' },
+  { id: 'perfect', name: 'Perfect Pair', desc: 'Hit a perfect pair side bet (25×)', kind: 'chip', tier: 'gold', on: 'blackjack', test: (e) => e.type === 'perfect' },
+  { id: 'counted', name: 'Counted Out', desc: 'Get walked out of blackjack by the pit boss', kind: 'cup', tier: 'bronze', on: 'blackjack', test: (e) => e.type === 'counted' },
 ];
 const ACH_XP = 150;
 const KIND_EMOJI = { cup: '🏆', star: '⭐', chip: '🪙', bottle: '🍾', crown: '👑' };
@@ -52,6 +61,7 @@ export const CARD_SIZE = 10;
 export const PERKS = [
   { id: 'booth', level: 5, emoji: '🛋️', name: 'VIP booth', desc: 'Bottle service is 20% off. You sit on velvet now.' },
   { id: 'highroller', level: 10, emoji: '🎩', name: 'High-roller table', desc: 'Red velvet felt and velvet ropes. Minimum $100 a spin, ×1.5 XP.', toggle: true },
+  { id: 'highlimit', level: 12, emoji: '🥂', name: 'High-limit blackjack', desc: 'Burgundy felt, Madame Vivienne dealing, regulars betting 10×. Minimum $500 a hand, ×1.5 XP.', toggle: true },
   { id: 'whale', level: 15, emoji: '🐋', name: 'Whale mode', desc: 'Enormous chips and an inflatable whale. Minimum $1,000 a spin, ×2 XP.', toggle: true },
 ];
 export const BOOTH_DISCOUNT = 0.2;
@@ -166,7 +176,7 @@ export function createGoals({ store, levels, wallet, toast, sound, flair, onChan
     }
     handle('spin', e);
   });
-  for (const name of ['drink', 'selfie', 'food', 'cashout', 'buy', 'freespins', 'dishes', 'broke', 'level']) on(name, (e) => handle(name, e));
+  for (const name of ['drink', 'selfie', 'food', 'cashout', 'buy', 'freespins', 'dishes', 'broke', 'level', 'blackjack']) on(name, (e) => handle(name, e));
 
   // ---------- perks ----------
   const unlocked = (p) => levels.level() >= p.level;

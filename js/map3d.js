@@ -195,10 +195,10 @@ const MODELS = {
 
 };
 
-// coming soon: roped off, lights low, a floating card to tease you
+// the blackjack table: cards dealt at every seat, and an ace spinning over the dealer's spot
 MODELS.blackjack = (u) => {
   const g = new THREE.Group();
-  const felt = std(0x0f4f8a, { roughness: 0.9 });
+  const felt = std(0x0f6a3a, { roughness: 0.9 });
   const leather = std(0x2a120a, { roughness: 0.45 });
   // a half-moon table, the dealer's straight edge at the back
   const half = (r, h) => new THREE.CylinderGeometry(r, r, h, 40, 1, false, -Math.PI / 2, Math.PI);
@@ -232,14 +232,6 @@ MODELS.blackjack = (u) => {
   // an ace, spinning over the dealer's spot
   const tease = mesh(new THREE.PlaneGeometry(0.34, 0.47), cardMat, 0, 1.25, -0.3);
   g.add(tease);
-  // and, obviously, a traffic cone
-  const cone = new THREE.Group();
-  cone.add(cyl(0.02, 0.2, 0.55, std(0xff6a00, { roughness: 0.5 }), 0, 0.3, 0, 16));
-  cone.add(cyl(0.1, 0.13, 0.1, std(0xffffff, { roughness: 0.5 }), 0, 0.3, 0, 16));
-  cone.add(box(0.46, 0.04, 0.46, std(0xff6a00), 0, 0.02, 0));
-  cone.position.set(-1.2, 0, 0.95);
-  cone.rotation.z = 0.12;
-  g.add(cone);
   u.push((dt, t) => {
     tease.rotation.y += dt * 1.6;
     tease.position.y = 1.25 + Math.sin(t * 1.8) * 0.08;

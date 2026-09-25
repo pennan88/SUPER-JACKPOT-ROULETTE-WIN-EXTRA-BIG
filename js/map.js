@@ -1,18 +1,18 @@
 // 🗺️ MAP, an app on your phone: the whole casino floor in 3D (map3d.js). Pick a place, walk there.
-// A new room is a place here, a model in map3d.js and a case in main.js's go(). Blackjack's already on
-// the floor, roped off (soon: true): drop the flag once the table opens.
+// A new room is a place here, a model in map3d.js and a case in main.js's go(). (A place that isn't
+// open yet gets soon: true: roped off, and you can't walk in.)
 
 import { CasinoMap } from './map3d.js';
 
 export const PLACES = [
   { id: 'slots', emoji: '🐉', name: 'Dragon Rush', color: '#ff2d9a', pos: [-0.4, -4.6], desc: '7×7 tumbling slots, ×1024 spots. DING DING DING.' },
   { id: 'roulette', emoji: '🎡', name: 'Roulette', color: '#2de08f', pos: [-0.4, 0.4], desc: 'The big wheel. Red or black. Mostly black.' },
-  { id: 'blackjack', emoji: '🃏', name: 'Blackjack', color: '#3fa9ff', pos: [-0.4, 5.0], soon: true, desc: 'Roped off. The suspiciously smug dealer is still learning to shuffle.' },
+  { id: 'blackjack', emoji: '🃏', name: 'Blackjack', color: '#3fa9ff', pos: [-0.4, 5.0], desc: 'Pays 3 to 2. A very smug dealer, and regulars with opinions.' },
 ];
 const byId = (id) => PLACES.find((p) => p.id === id);
 
 /**
- * @param here    () => the place you're at ('roulette' or 'slots')
+ * @param here    () => the place you're at ('roulette', 'slots' or 'blackjack')
  * @param go      (id) => actually go there (put the phone away, walk into the room)
  * @param blocked (id) => why you can't go there right now ('' if you can)
  * @param look    () => your character

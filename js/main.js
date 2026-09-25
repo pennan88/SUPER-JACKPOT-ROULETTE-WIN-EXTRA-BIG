@@ -23,6 +23,7 @@ import { createPerkDecor } from './perks3d.js';
 import { createRoadmap } from './roadmap.js';
 import { createMap } from './map.js';
 import { createBank } from './bank.js';
+import { createBlackjack } from './blackjack.js';
 
 const rand = (a, b) => a + Math.random() * (b - a);
 
@@ -60,6 +61,17 @@ let lastBets = null;
 let chipValue = 25;
 let spinning = false;
 let slots = null;          // the slot machine room, created further down
+let blackjack = null;      // the blackjack room, likewise
+
+// only one 3D room renders at a time: the phone, settings etc. pause whichever room you're in
+function pause3dRooms() {
+  wheel.pause();
+  blackjack?.pause();
+}
+function resume3dRooms() {
+  if (blackjack?.isOpen()) blackjack.resume();
+  else if (!slots?.isOpen()) wheel.resume();
+}
 
 const $ = (id) => document.getElementById(id);
 const money = (n) =>
@@ -749,6 +761,7 @@ document.addEventListener('keydown', (e) => {
     e.preventDefault();
     return dismissFx();
   }
+  if (blackjack?.isOpen()) return blackjack.key(e);
   if (slots?.isOpen()) {
     // in the slots room: Space pulls the lever, Escape walks back to roulette
     if (e.code === 'Space') {
@@ -999,7 +1012,7 @@ const booze = createBar({
 });
 startWaiter({
   stage: document.querySelector('.stage'),
-  canWalk: () => !fxActive() && !document.body.classList.contains('bonus-active') && !['vip-party-on', 'kitchen-on', 'hangover-on', 'phone-on'].some((c) => document.body.classList.contains(c)) && !slots?.isOpen(),
+  canWalk: () => !fxActive() && !document.body.classList.contains('bonus-active') && !['vip-party-on', 'kitchen-on', 'hangover-on', 'phone-on', 'in-blackjack'].some((c) => document.body.classList.contains(c)) && !slots?.isOpen(),
   onClink: () => sound.clink(),
   pickDrink: booze.pickDrink,
   getTarget: booze.target,
@@ -1023,11 +1036,11 @@ const tab = createTab({
     balance += v;
     render();
   },
-  pause3d: () => wheel.pause(),
-  resume3d: () => !slots?.isOpen() && wheel.resume(),
+  pause3d: () => pause3dRooms(),
+  resume3d: () => resume3dRooms(),
   isBusy: () =>
     spinning || fxActive() || !!document.querySelector('dialog[open]') ||
-    ['vip-party-on', 'bonus-active', 'hangover-on', 'phone-on'].some((c) => document.body.classList.contains(c)),
+    ['vip-party-on', 'bonus-active', 'hangover-on', 'phone-on', 'in-blackjack'].some((c) => document.body.classList.contains(c)),
 });
 
 // ---------- 🍺 Dave (he remembers you) ----------
@@ -1058,7 +1071,7 @@ const dave = createDave({
   // (an angry Dave doesn't care that your phone is out: he closes it and comes over anyway)
   isIdle: (ignorePhone = false) =>
     !spinning && !fxActive() && !slots?.isOpen() && !document.querySelector('dialog[open]') &&
-    !['vip-party-on', 'bonus-active', 'kitchen-on', 'hangover-on'].some((c) => document.body.classList.contains(c)) &&
+    !['vip-party-on', 'bonus-active', 'kitchen-on', 'hangover-on', 'in-blackjack'].some((c) => document.body.classList.contains(c)) &&
     (ignorePhone || !document.body.classList.contains('phone-on')),
   onSpill: () => {
     document.body.classList.add('sticky-table');
@@ -1080,8 +1093,8 @@ const hangover = createHangover({
     balance -= v;
     render();
   },
-  pause3d: () => wheel.pause(),
-  resume3d: () => !slots?.isOpen() && wheel.resume(),
+  pause3d: () => pause3dRooms(),
+  resume3d: () => resume3dRooms(),
   setLoud: (on) => {
     if (!sound.ctx) return;
     sound.master.gain.setTargetAtTime(on ? 1.9 : 1, sound.ctx.currentTime, 0.3);
@@ -1290,12 +1303,12 @@ phone = createPhone({
     balance -= v;
     render();
   },
-  pause3d: () => wheel.pause(),
-  resume3d: () => !slots?.isOpen() && wheel.resume(),
+  pause3d: () => pause3dRooms(),
+  resume3d: () => resume3dRooms(),
   canOpen: () =>
     !spinning && !fxActive() && !document.querySelector('dialog[open]') &&
     !['vip-party-on', 'bonus-active', 'kitchen-on', 'hangover-on'].some((c) => document.body.classList.contains(c)),
-  roomVisible: () => !slots?.isOpen(),
+  roomVisible: () => !slots?.isOpen() && !blackjack?.isOpen(),
   bannersOn: () => prefs.banners,
 });
 
@@ -1344,12 +1357,39 @@ slots = createSlots({
   },
   onClose: () => wheel.resume(),
 });
+// ---------- 🃏 BLACKJACK, with a very smug dealer ----------
+blackjack = createBlackjack({
+  sound,
+  toast,
+  getBalance: () => balance,
+  adjust: (delta) => {
+    balance += delta;
+    render();
+  },
+  onOpen: () => {
+    setAllIn(false);
+    wheel.pause(); // only one 3D room renders at a time
+  },
+  onClose: () => wheel.resume(),
+  booze,
+  highLimit: () => goals.perk('highlimit'),
+  onRound: ({ net, staked, multiple, mult }) => {
+    levels.bet(net > 0 ? 'win' : net < 0 ? 'loss' : 'push', staked, multiple, mult);
+    emit('spin', { game: 'blackjack', net, staked, multiple });
+    if (balance < 1) emit('broke');
+  },
+});
 
 // ---------- 🗺️ getting around: the Map on your phone ----------
 // You walk there on the map, so the room itself just whooshes past while the phone drops away.
 function travelTo(id) {
   phone.close();
-  if (id === 'slots') {
+  if (blackjack.isOpen()) blackjack.close();
+  if (id === 'blackjack') {
+    slots.hide({ quick: true });
+    scrollTo({ top: 0, behavior: 'smooth' });
+    blackjack.open();
+  } else if (id === 'slots') {
     scrollTo({ top: 0, behavior: 'smooth' });
     slots.show({ quick: true });
   } else if (id === 'roulette') slots.hide({ quick: true });
@@ -1364,9 +1404,14 @@ function travelTo(id) {
   createMap({
     sound,
     toast,
-    here: () => (slots.isOpen() ? 'slots' : 'roulette'),
+    here: () => (blackjack.isOpen() ? 'blackjack' : slots.isOpen() ? 'slots' : 'roulette'),
     go: travelTo,
-    blocked: (id) => (id === 'roulette' && slots.busy() ? '🐉 Let the reels finish first!' : ''),
+    blocked: (id) =>
+      blackjack.busy() ? '🃏 Finish your hand first!' :
+      slots.busy() ? '🐉 Let the reels finish first!' :
+      id === 'blackjack' && spinning ? 'Hold on, the ball is still rolling! 🎡' :
+      id === 'blackjack' && bets.size ? 'Take your chips off the roulette table first. 🃏' :
+      '',
     look: () => settings.look(),
     daveMet: () => dave.met(),
   }),

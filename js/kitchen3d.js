@@ -35,6 +35,7 @@ export class Stage3D {
     this.ro.observe(container);
     this.resize();
     r.setAnimationLoop(() => {
+      if (this.paused) return;
       const raw = this.clock.getDelta();
       const dt = Math.min(0.05, raw); // physics stays stable; tweens below use real time so they always finish
       const t = this.clock.elapsedTime;
@@ -56,6 +57,15 @@ export class Stage3D {
       }
       r.render(this.scene, this.camera);
     });
+  }
+
+  /** Stop drawing (another 3D room is on top), and carry on again. */
+  pause() {
+    this.paused = true;
+  }
+  resume() {
+    this.paused = false;
+    this.clock.getDelta(); // don't count the time we were away
   }
 
   tween(dur, fn, done) {

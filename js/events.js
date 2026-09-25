@@ -11,9 +11,10 @@ export function on(name, fn) {
 
 /**
  * Tell whoever is listening. Events used:
- *   spin      { game: 'roulette' | 'slots', net, staked, multiple, straight }
+ *   spin      { game: 'roulette' | 'slots' | 'blackjack', net, staked, multiple, straight }
  *   drink     { price, bottle }
  *   selfie, food, cashout { amount }, buy { item }, freespins, dishes, broke, level { level }
+ *   blackjack { type: 'natural' | 'double' | 'charlie' | 'split' | 'sidebet' | 'perfect' | 'tip' | 'counted' }
  */
 export function emit(name, data = {}) {
   subs.get(name)?.forEach((fn) => fn(data));
