@@ -2,7 +2,6 @@ import { RouletteWheel, colorOf, RED } from './wheel.js';
 import { celebrate, youDied, winLevel, fxActive, dismissFx, setWinFlair } from './fx.js';
 import { LobbyMusic } from './music.js';
 import { startWaiter } from './drinks.js';
-import { bonusDue, offerBonus } from './bonus.js';
 import { createBar } from './booze.js';
 import { watchAd } from './ads.js';
 import { createSlots } from './slots.js';
@@ -1480,25 +1479,5 @@ $('adBtn').addEventListener('click', () => {
     },
   });
 });
-
-// ---------- 🎁 daily login bonus ($1, 30 unskippable seconds) ----------
-// (after the morning after, if there is one: one ceremony at a time)
-if (bonusDue(store)) hangover.whenDone(() =>
-  setTimeout(
-    () =>
-      offerBonus({
-        store,
-        sound,
-        music,
-        onReward: (from) => {
-          balance += 1;
-          fly(from, rackPoint(1), 1, { onLand: () => { addBank(1); sound.cash(); } });
-          render();
-          toast('+$1 daily bonus. Living large. 💸');
-        },
-      }),
-    1500
-  )
-);
 
 render();

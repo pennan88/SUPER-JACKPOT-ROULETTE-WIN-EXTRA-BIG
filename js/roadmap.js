@@ -25,7 +25,6 @@ const MAYBES = [
   ['🌙', 'Night mode, even though casinos famously have no clocks or windows', 'ironic'],
   ['🔁', 'Martingale button: doubles your bet after every loss until the heat death of the universe', 'dangerous'],
   ['🎤', 'Hype announcer who screams "HE\'S ON FIRE" after two wins in a row', 'LIVE ✅'],
-  ['🎁', 'Daily login bonus of $1, delivered via a 30-second unskippable animation', 'LIVE ✅'],
   ['🐋', 'Whale mode: 10× bigger chips and a velvet rope around the table', 'LIVE ✅'],
   ['🛸', 'Alien abduction: a UFO beams your chips away (it\'s in the T&Cs)', 'LIVE ✅'],
   ['🎮', 'Controller support, because roulette on a gamepad is how nature intended', 'maybe'],

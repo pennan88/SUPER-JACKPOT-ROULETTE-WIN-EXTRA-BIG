@@ -2,6 +2,11 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { buildScenery } from './scenery.js';
+import {
+  N, STEP, TAU, R_IN, R_POCKET, R_OUT, R_REST, DISC_Y, BALL_R, APRON, surfaceY,
+  FRET_H, FRET_T, DIAMONDS, DIAMOND_R, DIAMOND_LONG, DIAMOND_SHORT, DIAMOND_H, DIAMOND_LIFT,
+  FPS, wheelAt, planSpin,
+} from './ballphysics.js';
 
 // European single-zero wheel order, clockwise when viewed from above.
 export const WHEEL_ORDER = [
@@ -10,34 +15,6 @@ export const WHEEL_ORDER = [
 ];
 export const RED = new Set([1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36]);
 export const colorOf = (n) => (n === 0 ? 'green' : RED.has(n) ? 'red' : 'black');
-
-const N = WHEEL_ORDER.length;
-const STEP = (Math.PI * 2) / N;
-const TAU = Math.PI * 2;
-
-// Radii / heights (world units)
-const R_IN = 2.2;        // inner edge of pockets
-const R_POCKET = 3.0;    // pockets end, number ring starts
-const R_OUT = 3.4;       // outer edge of rotating disc
-const R_BALL_POCKET = 2.6;
-const R_TRACK = 3.86;
-const DISC_Y = 0.02;
-const BALL_R = 0.1;
-
-// Profile of the static bowl's sloped apron, used to keep the ball on the surface.
-const APRON = [[3.4, DISC_Y], [3.45, 0.06], [3.9, 0.34], [4.0, 0.36]];
-function surfaceY(r) {
-  if (r <= APRON[0][0]) return DISC_Y;
-  for (let i = 1; i < APRON.length; i++) {
-    const [r1, y1] = APRON[i];
-    const [r0, y0] = APRON[i - 1];
-    if (r <= r1) return y0 + ((r - r0) / (r1 - r0)) * (y1 - y0);
-  }
-  return APRON[APRON.length - 1][1];
-}
-
-const smooth = (t) => t * t * (3 - 2 * t);
-const lerp = (a, b, t) => a + (b - a) * t;
 
 // Angle convention: local angle θ maps to (r cosθ, y, -r sinθ); rotating the wheel
 // group by φ around Y moves that point to world angle θ + φ.
@@ -140,12 +117,10 @@ export class RouletteWheel {
     this.scene.add(rimTrim);
 
     // Diamond deflectors on the apron
-    for (let i = 0; i < 8; i++) {
-      const a = (i / 8) * TAU + STEP / 2;
+    for (const { a, radial } of DIAMONDS) {
       const d = new THREE.Mesh(new THREE.OctahedronGeometry(1, 0), gold);
-      const r = 3.68;
-      d.position.copy(polar(r, a, surfaceY(r) + 0.03));
-      d.scale.set(i % 2 ? 0.05 : 0.14, 0.045, i % 2 ? 0.14 : 0.05);
+      d.position.copy(polar(DIAMOND_R, a, surfaceY(DIAMOND_R) + DIAMOND_LIFT));
+      d.scale.set(radial ? DIAMOND_LONG : DIAMOND_SHORT, DIAMOND_H, radial ? DIAMOND_SHORT : DIAMOND_LONG);
       d.rotation.y = a;
       d.castShadow = true;
       this.scene.add(d);
@@ -176,11 +151,11 @@ export class RouletteWheel {
     }
 
     // Frets between pockets
-    const fretGeo = new THREE.BoxGeometry(R_POCKET - R_IN, 0.14, 0.025);
+    const fretGeo = new THREE.BoxGeometry(R_POCKET - R_IN, FRET_H, FRET_T);
     for (let i = 0; i < N; i++) {
       const a = i * STEP + STEP / 2;
       const f = new THREE.Mesh(fretGeo, chrome);
-      f.position.copy(polar((R_IN + R_POCKET) / 2, a, DISC_Y + 0.07));
+      f.position.copy(polar((R_IN + R_POCKET) / 2, a, DISC_Y + FRET_H / 2));
       f.rotation.y = a;
       f.castShadow = true;
       wheel.add(f);
@@ -332,23 +307,21 @@ export class RouletteWheel {
     this.omega += 0.8 + level * 0.8;
   }
 
-  /** Spin and land on `target`. Resolves once the ball has settled. */
+  /**
+   * Spin and land on `target`. The ball's whole run is simulated up front (see
+   * ballphysics.js) and then played back. Resolves with the pocket it settled in.
+   */
   spin(target) {
-    const idx = WHEEL_ORDER.indexOf(target);
-    const startRel = this.ballRel;
-    const targetRel = idx * STEP;
-    const delta = (((targetRel - startRel) % TAU) + TAU) % TAU;
-    const revs = 7 + Math.floor(Math.random() * 3);
-    this.omega = 2.4 + Math.random() * 0.6;
+    const opts = {
+      pocket: WHEEL_ORDER.indexOf(target),
+      phi0: this.phi,
+      idle: this.idleOmega,
+      rel0: ((this.ballRel % TAU) + TAU) % TAU,
+    };
+    const plan = planSpin(opts) || planSpin({ ...opts, budgetMs: 2000 });
+    if (!plan) return Promise.resolve(target);
     return new Promise((resolve) => {
-      this.anim = {
-        start: performance.now(),
-        T: 7.5 + Math.random(),
-        startRel,
-        endRel: startRel + delta - revs * TAU, // ball travels against the wheel
-        lastPocket: null,
-        resolve,
-      };
+      this.anim = { plan, start: performance.now(), ev: 0, resolve };
     });
   }
 
@@ -356,68 +329,50 @@ export class RouletteWheel {
     const dt = Math.min(this.clock.getDelta(), 0.05);
     this.glow.intensity *= Math.exp(-dt * 1.4);
     this.scenery.update(this.clock.elapsedTime, dt);
-    this.omega += (this.idleOmega - this.omega) * (1 - Math.exp(-dt * 0.3));
-    this.phi += this.omega * dt;
-    this.wheel.rotation.y = this.phi;
 
     let rel = this.ballRel;
-    let r = R_BALL_POCKET;
-    let hop = 0;
+    let r = R_REST;
+    let y = DISC_Y + BALL_R;
 
     const a = this.anim;
     if (a) {
+      const { plan } = a;
       // wall-clock based so a backgrounded tab still finishes on time
-      const u = Math.min((performance.now() - a.start) / 1000 / a.T, 1);
-      const e = 1 - Math.pow(1 - u, 3);
-      rel = a.startRel + (a.endRel - a.startRel) * e;
+      const t = Math.min((performance.now() - a.start) / 1000, plan.T);
+      // the wheel follows the same spin-down the simulation used, so the ball lines up
+      ({ phi: this.phi, omega: this.omega } = wheelAt(plan.phi0, plan.omega0, plan.idle, t));
 
-      if (u < 0.08) {
-        // lifted out of the pocket and launched onto the track
-        const s = smooth(u / 0.08);
-        r = lerp(R_BALL_POCKET, R_TRACK, s);
-        hop = Math.sin(s * Math.PI) * 0.6;
-      } else if (u < 0.6) {
-        r = R_TRACK;
-      } else if (u < 0.74) {
-        // loses speed and spirals down the apron
-        r = lerp(R_TRACK, R_POCKET + 0.08, smooth((u - 0.6) / 0.14));
-      } else {
-        // bounces across the frets before dropping into its pocket
-        const s = (u - 0.74) / 0.26;
-        r = lerp(R_POCKET + 0.08, R_BALL_POCKET, smooth(Math.min(s * 1.6, 1)));
-        hop = Math.abs(Math.sin(s * Math.PI * 3.5)) * 0.22 * Math.pow(1 - s, 2);
-        const j = Math.max(0, 1 - s / 0.8);
-        rel += Math.sin(s * 38) * 0.12 * j * j;
+      const fr = plan.frames;
+      const f = t * FPS;
+      const i = Math.min(Math.floor(f), fr.length / 3 - 2);
+      const k = Math.min(f - i, 1);
+      rel = fr[i * 3] + (fr[i * 3 + 3] - fr[i * 3]) * k;
+      r = fr[i * 3 + 1] + (fr[i * 3 + 4] - fr[i * 3 + 1]) * k;
+      y = fr[i * 3 + 2] + (fr[i * 3 + 5] - fr[i * 3 + 2]) * k;
+      // roll speed and track position for the audio: bright on the outer track, duller down the apron
+      const ro = plan.roll;
+      this.onRoll(ro[i * 2] + (ro[i * 2 + 2] - ro[i * 2]) * k, ro[i * 2 + 1] + (ro[i * 2 + 3] - ro[i * 2 + 1]) * k);
 
-        const pocket = Math.round((((rel % TAU) + TAU) % TAU) / STEP) % N;
-        if (pocket !== a.lastPocket) {
-          if (a.lastPocket !== null) this.onTick(1 - s);
-          a.lastPocket = pocket;
-        }
+      // knocks against frets and diamonds; skip ones long gone (the tab was hidden)
+      while (a.ev < plan.events.length && plan.events[a.ev].t <= t) {
+        const e = plan.events[a.ev++];
+        if (t - e.t > 0.25) continue;
+        if (e.type === 'tick') this.onTick(e.v);
+        else this.onClack();
       }
 
-      // Ball speed over the ground (rad/s), normalised to roughly 0..1 for the audio
-      const relSpeed = ((a.endRel - a.startRel) * 3 * Math.pow(1 - u, 2)) / a.T;
-      const speed = Math.min(1, Math.abs(relSpeed + this.omega) / 22);
-      const rolling = u > 0.06 && u < 0.76;
-      // radius drives the tone: bright on the outer track, duller down the apron
-      this.onRoll(rolling ? speed : 0, rolling ? (r - R_POCKET) / (R_TRACK - R_POCKET) : 0);
-      if (u >= 0.67 && !a.clacked) {
-        a.clacked = true;
-        this.onClack();
-      }
-
-      if (u >= 1) {
-        this.ballRel = a.endRel;
-        rel = a.endRel;
+      if (t >= plan.T) {
+        this.ballRel = rel = plan.endRel;
         this.anim = null;
         this.onRoll(0, 0);
-        a.resolve(WHEEL_ORDER[Math.round((((rel % TAU) + TAU) % TAU) / STEP) % N]);
+        a.resolve(WHEEL_ORDER[plan.pocket]);
       }
+    } else {
+      this.omega += (this.idleOmega - this.omega) * (1 - Math.exp(-dt * 0.3));
+      this.phi += this.omega * dt;
     }
-
-    const beta = this.phi + rel;
-    this.ball.position.copy(polar(r, beta, surfaceY(r) + BALL_R + hop));
+    this.wheel.rotation.y = this.phi;
+    this.ball.position.copy(polar(r, this.phi + rel, y));
 
     for (const h of this.hooks) h(dt, this.clock.elapsedTime);
     this.controls.update();
