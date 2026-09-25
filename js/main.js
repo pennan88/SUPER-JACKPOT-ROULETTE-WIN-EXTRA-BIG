@@ -25,6 +25,7 @@ import { createMap } from './map.js';
 import { createBank } from './bank.js';
 import { createBlackjack } from './blackjack.js';
 import { createTableLife } from './tablelife.js';
+import { createGirlfriend } from './girlfriend.js';
 
 const rand = (a, b) => a + Math.random() * (b - a);
 
@@ -1297,7 +1298,11 @@ const courier = createCourier({ wheel, dave });
 
 // ---------- 🧓🔥🛸 Grandma, being on fire, and the occasional UFO ----------
 const life = createTableLife({ wheel, store, toast, sound, getBalance: () => balance, take: takeChips, give: giveChips, onUfo: () => emit('ufo') });
+// ---------- 💋 Scarlett (win a couple of spins and she comes over) ----------
+const gf = createGirlfriend({ wheel, store, sound, toast, booze, look: () => settings.look(), getBalance: () => balance });
+
 phone = createPhone({
+  gf,
   button: $('phoneBtn'),
   store,
   sound,

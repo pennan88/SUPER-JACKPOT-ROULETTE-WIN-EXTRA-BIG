@@ -161,6 +161,11 @@ You get 30 seconds, $20 a plate and $5 per gross thing. Wash off the whole tab a
 - **🔥 You're on fire**: win three spins in a row and an announcer yells **YOU'RE ON FIRE!**, the wheel's rim bursts into flames, and every spin earns **×1.5 XP** until you lose one.
 - **🛸 Alien abduction**: once in a blue moon a UFO swoops over the table and beams up a stack of your chips. It's in the terms and conditions. There's a trophy for it: **Close Encounter**.
 
+### 💋 SCARLETT
+Win a couple of roulette spins in a row and **Scarlett** (red hair, heart-shaped glasses, sequins) walks over: *"Hey, lucky. Is this seat taken?"* Pick a line: smooth, cheesy, or one Dave taught you. Whether it lands depends on the line, your winning streak, how drunk you are and whether you dressed up (cheesy works when you're on a roll; Dave's line only works if you're both a bit tipsy).
+
+Say the right thing and she's your girlfriend. She stands by the table cheering your wins, dabbing on the big ones and facepalming your losses, and she **texts you** (Messages gets a Dave / Scarlett tab). A **❤️ meter** goes up when you're sweet, wobbles when you flirt, and drops when you're cold, leave her on read, go broke or get walked out of blackjack by the pit boss. At zero she dumps you. By text. 💔 Trophies: **Taken** and **Dumped by Text**.
+
 ### 🍺 DAVE'S REVENGE
 Remember Dave, the guy who crashed your bottle party? **He remembers you.** (If you skipped the party, you'll meet him the first time you get properly drunk.)
 
@@ -216,7 +221,7 @@ Every bet you make (one spin, on roulette or the slots) earns **XP**. Bigger bet
 Your phone has a **🏆 Goals** app:
 
 - **Daily challenges**: three a day (the same three for everyone), like *hit a straight-up number*, *win 2 spins in a row*, *order bottle service* or *lose 5 spins (we believe in you)*. Each pays XP and wallet money; finish all three for a bonus.
-- **Achievements**: seventeen of them, from *Beginner's Luck* to *Whale Watching* ($10,000 on one spin). Each one spins onto the screen as a **3D trophy** and then stands on the **trophy shelves** behind your character.
+- **Achievements**: nineteen of them, from *Beginner's Luck* to *Whale Watching* ($10,000 on one spin). Each one spins onto the screen as a **3D trophy** and then stands on the **trophy shelves** behind your character.
 - **🎟️ Loyalty card**: one stamp for every $100 you lose. Fill all ten and redeem it: a rubber stamp slams down **REDEEMED**, the card flips over, and your prize is… **nothing**. Thank you for your loyalty.
 - **Level perks**: **🛋️ VIP booth** at level 5 (bottle service 20% off), **🎩 High-roller table** at level 10 (red velvet felt and velvet ropes around the wheel, minimum $100 a spin, ×1.5 XP), **🥂 High-limit blackjack** at level 12 (burgundy felt, a new dealer, $500 minimum, ×1.5 XP) and **🐋 Whale mode** at level 15 (enormous chips and an inflatable whale bobbing behind the wheel, minimum $1,000 a spin, ×2 XP). Switch the last three on and off whenever you like.
 
@@ -344,6 +349,7 @@ js/phone.js           the phone: home screen, Messages, CabCab, GrubGrab, Camera
 js/phone3d.js         the 3D handset (CSS3D screen) and the selfie camera scene
 js/courier.js         Marco the food courier, walking across your table in 3D
 js/tablelife.js       Grandma, being on fire, and the UFO: life around the roulette table
+js/girlfriend.js      Scarlett: meeting her, her texts, the ❤️ meter, getting dumped
 js/avatar.js          your 3D character, the store catalogue, the turntable
 js/settings.js        the Style, Store, Goals and Settings apps
 js/bank.js            the Bank app: cash out, fake card and fake Swish deposits

@@ -3843,3 +3843,17 @@ body.reduce-motion .hype { animation: none; }
   .bj-actions .btn { min-width: 0; padding: 7px 9px; font-size: 13px; }
   .bj-actions .bj-deal { min-width: 84px; font-size: 14px; }
 }
+
+/* 💋 Scarlett: the pick-up card, and her thread on your phone */
+.gf-talk { position: absolute; right: 16px; bottom: 16px; z-index: 7; width: min(360px, calc(100% - 32px)); padding: 14px 16px; border-radius: 16px; background: rgba(28, 6, 14, 0.94); border: 1px solid rgba(255, 90, 140, 0.55); box-shadow: 0 12px 34px rgba(0, 0, 0, 0.55); animation: pop 0.25s ease-out; }
+.gf-who { font-family: Cinzel, serif; font-weight: 900; color: #ff8fb5; letter-spacing: 0.05em; }
+.gf-talk p { margin: 6px 0 10px; font-style: italic; color: #fff4d6; }
+.gf-lines { display: flex; flex-direction: column; gap: 6px; }
+.gf-lines .btn { text-align: left; padding: 9px 12px; font-size: 13.5px; white-space: normal; }
+.gf-lines .btn:hover { border-color: #ff8fb5; }
+.msg-tabs { display: flex; gap: 6px; padding: 6px 12px 0; }
+.msg-tab { flex: 1; padding: 6px 8px; border-radius: 99px; border: 1px solid rgba(255, 255, 255, 0.15); background: rgba(255, 255, 255, 0.06); color: inherit; font-size: 12.5px; font-weight: 700; }
+.msg-tab.on { background: #0a84ff; border-color: #0a84ff; color: #fff; }
+.msg-tab b { display: inline-block; min-width: 16px; padding: 0 4px; border-radius: 99px; background: #ff3b30; color: #fff; font-size: 10px; }
+.gf-meter { height: 5px; margin: 8px 14px 0; border-radius: 99px; background: rgba(255, 255, 255, 0.12); overflow: hidden; }
+.gf-meter i { display: block; height: 100%; background: linear-gradient(90deg, #ff3b6b, #ff8fb5); transition: width 0.4s; }
