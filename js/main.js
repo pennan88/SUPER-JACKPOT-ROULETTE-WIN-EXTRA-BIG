@@ -24,6 +24,7 @@ import { createRoadmap } from './roadmap.js';
 import { createMap } from './map.js';
 import { createBank } from './bank.js';
 import { createBlackjack } from './blackjack.js';
+import { createTableLife } from './tablelife.js';
 
 const rand = (a, b) => a + Math.random() * (b - a);
 
@@ -837,8 +838,9 @@ function settle(n) {
   const net = returned - staked;
   balance += returned;
   session += net;
-  levels.bet(net > 0 ? 'win' : net < 0 ? 'loss' : 'push', staked, returned / staked, perkMult());
+  levels.bet(net > 0 ? 'win' : net < 0 ? 'loss' : 'push', staked, returned / staked, perkMult() * life.xpMult());
   emit('spin', { game: 'roulette', net, staked, multiple: returned / staked, straight });
+  life.onSpin(net);
 
   history.unshift(n);
   history = history.slice(0, 18);
@@ -1043,6 +1045,23 @@ const tab = createTab({
     ['vip-party-on', 'bonus-active', 'hangover-on', 'phone-on', 'in-blackjack'].some((c) => document.body.classList.contains(c)),
 });
 
+// chips off your rack, flying to someone on screen (Dave, Grandma, a UFO), and back again
+function takeChips(amount, to) {
+  if (spinning || balance < amount) return false;
+  balance -= amount;
+  pieces(amount, 4).forEach((p, i) =>
+    fly(rackPoint(p.denom), to, p.denom, { delay: i * 90, fade: true, onStart: () => addBank(-p.value) })
+  );
+  sound.chip();
+  render();
+  return true;
+}
+function giveChips(amount, from) {
+  balance += amount;
+  fly(from, rackPoint(1), 1, { onLand: () => { addBank(amount); sound.cash(); } });
+  render();
+}
+
 // ---------- 🍺 Dave (he remembers you) ----------
 const dave = createDave({
   wheel,
@@ -1053,21 +1072,8 @@ const dave = createDave({
   booze,
   getBalance: () => balance,
   // he takes chips straight off your rack. he's good for it.
-  borrow: (amount, to) => {
-    if (spinning || balance < amount) return false;
-    balance -= amount;
-    pieces(amount, 4).forEach((p, i) =>
-      fly(rackPoint(p.denom), to, p.denom, { delay: i * 90, fade: true, onStart: () => addBank(-p.value) })
-    );
-    sound.chip();
-    render();
-    return true;
-  },
-  repay: (amount, from) => {
-    balance += amount;
-    fly(from, rackPoint(1), 1, { onLand: () => { addBank(amount); sound.cash(); } });
-    render();
-  },
+  borrow: takeChips,
+  repay: giveChips,
   // (an angry Dave doesn't care that your phone is out: he closes it and comes over anyway)
   isIdle: (ignorePhone = false) =>
     !spinning && !fxActive() && !slots?.isOpen() && !document.querySelector('dialog[open]') &&
@@ -1288,6 +1294,9 @@ function levelledUp(l) {
 
 // ---------- 📱 your phone (and Marco, who delivers food to roulette tables) ----------
 const courier = createCourier({ wheel, dave });
+
+// ---------- 🧓🔥🛸 Grandma, being on fire, and the occasional UFO ----------
+const life = createTableLife({ wheel, store, toast, sound, getBalance: () => balance, take: takeChips, give: giveChips, onUfo: () => emit('ufo') });
 phone = createPhone({
   button: $('phoneBtn'),
   store,

@@ -161,7 +161,7 @@ export function buildShelf(list) {
       const lip = new THREE.Mesh(new THREE.BoxGeometry(2.3, 0.03, 0.03), brass);
       lip.position.set(side * 3.1, y + 0.02, 0.41);
       root.add(lip);
-      for (let i = 0; i < perRow; i++) spots.push(new THREE.Vector3(side * 3.1 + (i - (perRow - 1) / 2) * 0.72, y + 0.05, 0.05));
+      for (let i = 0; i < perRow; i++) spots.push(new THREE.Vector3(side * 3.1 + (i - (perRow - 1) / 2) * Math.min(0.72, 2.1 / Math.max(1, perRow - 1)), y + 0.05, 0.05));
     }
   }
   list.forEach((t, i) => {

@@ -3823,3 +3823,23 @@ body.drunk-4 .bj-stage canvas { filter: blur(2px) saturate(1.35); }
 .dr-pt-markers li { display: flex; align-items: center; gap: 10px; padding: 4px 8px; border-radius: 12px; background: rgba(255, 255, 255, 0.05); line-height: 1.35; }
 .dr-pt-markers img { width: 46px; height: 46px; flex: none; }
 .dr-pt-markers strong { display: block; color: #fff3b0; font-size: 12px; letter-spacing: 0.08em; }
+
+/* 🔥 you're on fire (three roulette wins in a row) */
+.hype { position: absolute; left: 50%; top: 38%; z-index: 6; translate: -50% -50%; pointer-events: none; text-align: center; white-space: nowrap; font-family: Cinzel, serif; font-weight: 900; font-size: clamp(34px, 6.5vw, 72px); color: #fff3b0; text-shadow: 0 0 12px #ff8a00, 0 0 30px #ff3d00, 0 4px 0 #7a1400; animation: hype 2.6s ease-out forwards; }
+.hype small { display: block; font-size: 0.3em; letter-spacing: 0.1em; color: #ffd6a0; }
+@keyframes hype { 0% { opacity: 0; scale: 0.4; rotate: -8deg; } 15% { opacity: 1; scale: 1.1; rotate: 3deg; } 25% { scale: 1; rotate: 0deg; } 80% { opacity: 1; } 100% { opacity: 0; scale: 1.15; } }
+body.reduce-motion .hype { animation: none; }
+
+/* 📱 blackjack on a phone: a slimmer bar that doesn't bury your cards */
+@media (max-width: 640px) {
+  .bj-bar { gap: 6px; padding: 6px 8px; bottom: 6px; border-radius: 14px; }
+  .bj-money span:first-child { display: none; } /* the top bar shows your balance; keep the bet */
+  .bj-money b { font-size: 15px; }
+  .bj-chips { gap: 5px; }
+  .bj-chip { width: 32px; height: 32px; font-size: 10px; }
+  .bj-extras { gap: 4px; }
+  .bj-pill { padding: 4px 8px; font-size: 11px; }
+  .bj-actions { gap: 5px; }
+  .bj-actions .btn { min-width: 0; padding: 7px 9px; font-size: 13px; }
+  .bj-actions .bj-deal { min-width: 84px; font-size: 14px; }
+}
