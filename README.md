@@ -223,11 +223,6 @@ Your phone has a **🏆 Goals** app:
 ### 📺 WATCH AN AD, GET $100
 Completely broke? At exactly **$0** with nothing on the table, a **Watch ad: +$100** button appears. Enjoy a message from our totally real sponsors: Hot Singles (they're dice), Waiter Academy™, Grandma's Cookies, Download More Money.biz and friends. It's "Ad 1 of 1"… until it becomes **Ad 2 of 1**. The skip button counts down, then refuses. After 15 seconds, claim your $100.
 
-### 🎁 DAILY LOGIN BONUS
-Once a day you're offered a **life-changing reward**, delivered via a **30-second, fully unskippable** ceremony. There's a progress bar with trust issues, a rigorous eligibility check, a vigorously shaken gift box, an ad for this exact game, and a money counter that counts *down*. It ends with the grand reveal: **$1**.
-
-The Skip button runs away from your mouse and its countdown keeps starting over. Escape and Space just get you *"Nice try 😏"*. Declining also takes 30 seconds. Want to watch it again today? Add `?bonus` to the URL.
-
 ### 💳 The Fake Bank of Fake Money
 Out of chips? Open the **🏦 Bank** on your phone, hit **💳 Card** and "deposit" with a fake card. There's a live card preview, validation and a very convincing "Pretending to contact the bank…" spinner. No card? Hit **📱 Swish**, pick an amount and approve with your imaginary fingerprint. No app, no phone number, no real money. Then the phone goes away and the chips fly into your rack.
 
@@ -270,7 +265,6 @@ On narrow screens the table flips vertical: 0 on top, numbers running down the s
 - 🌙 **Night mode**, even though casinos famously have no clocks or windows
 - 🔁 **Martingale button**, which doubles your bet after every loss until the heat death of the universe
 - ~~🎤 **Hype announcer** who screams "HE'S ON FIRE" after two wins in a row~~ ✅ **SHIPPED** (three wins, and the wheel catches fire)
-- ~~🎁 **Daily login bonus** of $1, delivered via a 30-second unskippable animation~~ ✅ **SHIPPED**
 - ~~🐋 **Whale mode**: the chips are 10× bigger and the table gets a velvet rope~~ ✅ **SHIPPED** (level 15)
 - ~~🛸 **Alien abduction**: a UFO beams your chips away. It's in the terms and conditions.~~ ✅ **SHIPPED**
 - 🎮 **Controller support**, because roulette on a gamepad is how nature intended
@@ -329,7 +323,8 @@ It's a static site. [vercel.json](vercel.json) tells Vercel to serve the folder 
 index.html            the page
 style.css             the drip
 js/main.js            the game: bets, chips, rack, ALL IN, sounds; wires up the phone apps
-js/wheel.js           the 3D wheel, ball physics-ish and camera
+js/wheel.js           the 3D wheel and camera, and plays the ball back
+js/ballphysics.js     the ball: simulated up front with real collisions, then played back
 js/scenery.js         the casino: table, carpet, slot machines, lights, haze
 js/fx.js              WIN / MEGA WIN / JACKPOT! celebrations and YOU DIED
 js/drinks.js          the free-drinks waiter (never stops at your table)
@@ -363,13 +358,12 @@ js/ads.js             the totally real sponsors ($100 for the broke)
 js/slots.js           DRAGON RUSH WIN BIG: tumbles, markers, free spins, buy bonus, autoplay
 js/rush-math.js       the slot maths: clusters, wilds, tumbles, ×1024 spots, the 10 markers
 js/slots3d.js         the 3D slot: gems, markers, pagoda gate, sky, the serpent dragon
-js/bonus.js           the 30-second unskippable $1 daily login bonus
 js/music.js           the procedural Vegas big-band loop
 scripts/dev-server.js tiny zero-dependency local server (not deployed)
 scripts/simulate-slots.mjs  plays Dragon Rush a few hundred thousand times to check the return
 ```
 
-- **Fair-ish odds:** results come from `crypto.getRandomValues`, with no bias toward any number. The house edge is the good old single zero, same as a real European wheel.
+- **Fair-ish odds:** results come from `crypto.getRandomValues`, with no bias toward any number. The ball is then physically simulated (frets, diamonds, walls) until a run lands in that pocket, so what you see is what you get. The house edge is the good old single zero, same as a real European wheel.
 - **Everything is generated:** textures, sounds and music are all drawn or synthesised at runtime. The only things downloaded are Three.js, a few fonts and (only if you pick a song) the YouTube player.
 - **Your balance is saved** in your browser's `localStorage`. Reset it any time from the 🏦 Bank on your phone.
 
