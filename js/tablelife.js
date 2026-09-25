@@ -93,9 +93,10 @@ function buildFire() {
  * @param wheel      the roulette wheel (scene, camera, per-frame hook)
  * @param take(amount, point)  chips leave your rack, flying to a point on screen
  * @param give(amount, point)  chips come back to your rack
- * @param onUfo()    a close encounter (for the trophy)
+ * @param onUfo(amount)      a close encounter (for the trophy, and the morning paper)
+ * @param onGrandma(amount)  Grandma minded some chips (the morning paper wants to know)
  */
-export function createTableLife({ wheel, store, toast, sound, getBalance, take, give, onUfo }) {
+export function createTableLife({ wheel, store, toast, sound, getBalance, take, give, onUfo, onGrandma }) {
   const tmp = new THREE.Vector3();
   const screen = (obj, yUp) => {
     obj.getWorldPosition(tmp);
@@ -199,7 +200,10 @@ export function createTableLife({ wheel, store, toast, sound, getBalance, take, 
           gran.t = 0;
           const said = gran.amount;
           toast(`👵 Grandma: "Three in a row? That's enough, dear. I'll mind ${'$' + said.toLocaleString('en-US')} of this until tomorrow."`);
-          if (take(said, screen(a.root, 1.4))) store.set('fr.grandma', { amount: said, date: today() });
+          if (take(said, screen(a.root, 1.4))) {
+            store.set('fr.grandma', { amount: said, date: today() });
+            onGrandma?.(said);
+          }
         }
       } else if (gran.phase === 'talk') {
         walking = false;
@@ -257,7 +261,7 @@ export function createTableLife({ wheel, store, toast, sound, getBalance, take, 
           stack.traverse((o) => (o.geometry?.dispose(), o.material?.dispose()));
           if (take(ufo.amount, screen(g, 0))) {
             toast(`🛸 A UFO beamed up ${'$' + ufo.amount.toLocaleString('en-US')} of your chips. It's in the terms and conditions.`);
-            onUfo?.();
+            onUfo?.(ufo.amount);
           }
           sound.blip(900, 0.5, 'sine', 0.06);
         }

@@ -25,6 +25,7 @@ import { createBank } from './bank.js';
 import { createBlackjack } from './blackjack.js';
 import { createTableLife } from './tablelife.js';
 import { createGirlfriend, WHO } from './girlfriend.js';
+import { createNight } from './night.js';
 
 const rand = (a, b) => a + Math.random() * (b - a);
 
@@ -54,6 +55,8 @@ let session = 0;
 
 // ---------- ⭐ levels, and 👛 the wallet (the only money the store takes) ----------
 const levels = createLevels({ store, onGain: (xp) => gainedXp(xp), onLevelUp: (l) => levelledUp(l) });
+// 📰 what happened tonight, for tomorrow morning's paper
+const night = createNight({ store });
 const wallet = createWallet({ store, level: () => levels.level() });
 let pendingCash = 0; // cashed out, but still flying into the wallet
 let bets = new Map();      // betKey -> amount
@@ -1101,6 +1104,7 @@ const hangover = createHangover({
   },
   pause3d: () => pause3dRooms(),
   resume3d: () => resume3dRooms(),
+  morning: () => morningInfo(),
   setLoud: (on) => {
     if (!sound.ctx) return;
     sound.master.gain.setTargetAtTime(on ? 1.9 : 1, sound.ctx.currentTime, 0.3);
@@ -1307,7 +1311,24 @@ function levelledUp(l) {
 const courier = createCourier({ wheel, dave });
 
 // ---------- 🧓🔥🛸 Grandma, being on fire, and the occasional UFO ----------
-const life = createTableLife({ wheel, store, toast, sound, getBalance: () => balance, take: takeChips, give: giveChips, onUfo: () => emit('ufo') });
+const life = createTableLife({
+  wheel,
+  store,
+  toast,
+  sound,
+  getBalance: () => balance,
+  take: takeChips,
+  give: giveChips,
+  onUfo: (amount) => emit('ufo', { amount }),
+  onGrandma: (amount) => emit('grandma', { amount }),
+});
+
+// the morning after: the paper (then a fresh night), your hotel room, and whoever you married
+function morningInfo() {
+  const paper = night.headlines();
+  night.reset();
+  return { paper, hotel: settings.look().hotel, spouse: gf.atHome() };
+}
 // ---------- 💋 your date (win a couple of spins and someone comes over) ----------
 const gf = createGirlfriend({
   wheel,

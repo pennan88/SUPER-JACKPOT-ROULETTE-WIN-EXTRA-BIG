@@ -156,6 +156,11 @@ A rubber stamp slams **UNPAID** onto the total. Pay it, or say *"Wash dishes ins
 
 You get 30 seconds, $20 a plate and $5 per gross thing. Wash off the whole tab and the chef might slip you a tip. Fall short and the manager writes off the rest, but you're **banned from the bar for 90 seconds**.
 
+### 📰 THE MORNING AFTER
+Wake up in the hotel and there's a newspaper on your bed: **The Daily Jackpot**, with headlines about your night. Biggest loss, biggest win, drinks, the UFO, the pit boss, Grandma, your wedding, your divorce… *"LOCAL GAMBLER MARRIES SCARLETT IN VEGAS CHAPEL."*
+
+And the room can be upgraded in the store (🏨 Hotel room, paid from your wallet): the **Gold Suite** (a portrait of Dave and champagne on ice), the **Hot Tub Suite**, and the **Penthouse**, which has a chandelier and a tiger asleep on the carpet. Nobody knows where the tiger came from either.
+
 ### 🧓🔥🛸 LIFE AROUND THE TABLE
 - **🧓 Grandma**: lose three roulette spins in a row and she shuffles over in her bathrobe, wags a finger and minds some of your chips (a fifth, up to $500) until tomorrow. Next time you visit, she gives them back. With a cookie. Once a day.
 - **🔥 You're on fire**: win three spins in a row and an announcer yells **YOU'RE ON FIRE!**, the wheel's rim bursts into flames, and every spin earns **×1.5 XP** until you lose one.
@@ -174,9 +179,11 @@ Say the right thing and they're yours. They stand by the table cheering your win
 - **💌 Dates** (paid in chips): a spin on Dragon Rush, a GrubGrab kebab, dinner at the hotel or VIP bottle service, each a little 3D scene of the two of you at a candlelit table.
 - **🎁 Gifts** (from your wallet): a rose, a lei, star glasses, a gold chain, the crown… and they **wear them** at the table.
 - **💍 Propose** once the ❤️ is at 90 or more (the ring is $500 from your wallet): a 3D Vegas wedding under a flower arch, with Dave as the best man. Nobody invited him.
-- At zero ❤️ you get **dumped by text** 💔 (or, if you're married, the divorce papers go to the hotel).
+- At zero ❤️ you get **dumped by text** 💔 (or, if you're married, the divorce papers go to the hotel). Or end it yourself: the **💔** button in their thread (tap twice; it's over text, like a coward).
+- **Flirting while taken**: win a couple of spins and someone else might walk over anyway, right next to your date. Say "Sorry, I'm taken ❤️" for bonus love, or try a line: if it lands there's a 70% chance your date sees it (**💥 SLAP**, and the ❤️ takes a beating); otherwise you get their number, and they're first in line if you ever split up.
+- **Married?** They move in: on hangover mornings they're standing at the end of the hotel bed, arms crossed. *"Where were you?"*
 
-**Who you date** is a setting on your phone (⚙️ Settings): girlfriend, boyfriend or partner. It swaps the names, looks and words. Trophies: **Taken**, **Dinner for Two**, **Married in Vegas** and **Dumped by Text**.
+**Who you date** is a setting on your phone (⚙️ Settings): girlfriend, boyfriend or partner. It swaps the names, looks and words. Trophies: **Taken**, **Dinner for Two**, **Married in Vegas**, **Caught**, **Heartbreaker** and **Dumped by Text**.
 
 ### 🍺 DAVE'S REVENGE
 Remember Dave, the guy who crashed your bottle party? **He remembers you.** (If you skipped the party, you'll meet him the first time you get properly drunk.)
@@ -233,7 +240,7 @@ Every bet you make (one spin, on roulette or the slots) earns **XP**. Bigger bet
 Your phone has a **🏆 Goals** app:
 
 - **Daily challenges**: three a day (the same three for everyone), like *hit a straight-up number*, *win 2 spins in a row*, *order bottle service* or *lose 5 spins (we believe in you)*. Each pays XP and wallet money; finish all three for a bonus.
-- **Achievements**: twenty-one of them, from *Beginner's Luck* to *Whale Watching* ($10,000 on one spin). Each one spins onto the screen as a **3D trophy** and then stands on the **trophy shelves** behind your character.
+- **Achievements**: twenty-three of them, from *Beginner's Luck* to *Whale Watching* ($10,000 on one spin). Each one spins onto the screen as a **3D trophy** and then stands on the **trophy shelves** behind your character.
 - **🎟️ Loyalty card**: one stamp for every $100 you lose. Fill all ten and redeem it: a rubber stamp slams down **REDEEMED**, the card flips over, and your prize is… **nothing**. Thank you for your loyalty.
 - **Level perks**: **🛋️ VIP booth** at level 5 (bottle service 20% off), **🎩 High-roller table** at level 10 (red velvet felt and velvet ropes around the wheel, minimum $100 a spin, ×1.5 XP), **🥂 High-limit blackjack** at level 12 (burgundy felt, a new dealer, $500 minimum, ×1.5 XP) and **🐋 Whale mode** at level 15 (enormous chips and an inflatable whale bobbing behind the wheel, minimum $1,000 a spin, ×2 XP). Switch the last three on and off whenever you like.
 
@@ -357,6 +364,7 @@ js/phone3d.js         the 3D handset (CSS3D screen) and the selfie camera scene
 js/courier.js         Marco the food courier, walking across your table in 3D
 js/tablelife.js       Grandma, being on fire, and the UFO: life around the roulette table
 js/girlfriend.js      dating: meeting someone, texts, the ❤️ meter, dates, gifts, the wedding
+js/night.js           what happened tonight, for the morning newspaper
 js/avatar.js          your 3D character, the store catalogue, the turntable
 js/settings.js        the Style, Store, Goals and Settings apps
 js/bank.js            the Bank app: cash out, fake card and fake Swish deposits

@@ -15,8 +15,9 @@ const pick = (arr) => arr[(Math.random() * arr.length) | 0];
 /**
  * @param dave      Dave remembers everything; his texts end up on the phone
  * @param setLoud   (on) => void, make every sound too loud
+ * @param morning   () => { paper: [headlines], hotel: tier, spouse: { look, name, title } | null }
  */
-export function createHangover({ store, sound, toast, booze, dave, getBalance, spend, pause3d, resume3d, setLoud }) {
+export function createHangover({ store, sound, toast, booze, dave, getBalance, spend, pause3d, resume3d, setLoud, morning }) {
   // remember how drunk you were when you walked away
   const noteExit = () => store.set('fr.leftDrunk', { bac: booze.bac(), drinks: booze.count(), t: Date.now() });
   addEventListener('pagehide', noteExit);
@@ -60,10 +61,19 @@ export function createHangover({ store, sound, toast, booze, dave, getBalance, s
     requestAnimationFrame(() => el.classList.add('on'));
     addEventListener('keydown', onKey, true);
     pause3d();
+    const m = morning?.() || {};
     scene = new HangoverScene(el.querySelector('.k-stage'), {
       texts,
       onBuzz: () => sound.blip(70, 0.35, 'square', 0.05),
+      headlines: m.paper,
+      hotel: m.hotel,
+      spouse: m.spouse,
     });
+    const HOTEL_LINE = {
+      suite: '🛎️ The Gold Suite. Dave is watching you from a painting.',
+      hottub: '🛁 The hot tub is still bubbling. Someone left a rubber duck in it.',
+      tiger: "🐅 There's a tiger asleep on the carpet. Don't wake it.",
+    };
 
     const owed = dave.owed();
     setTimeout(() => {
@@ -78,6 +88,9 @@ export function createHangover({ store, sound, toast, booze, dave, getBalance, s
             <li>💸 ${owed ? `Dave owes you <b>${money(owed)}</b>. Dave will never pay you back.` : 'Dave says you owe HIM money. You do not.'}</li>
             ${reason === 'cab' ? `<li>🚕 Cab: <b>-${money(info.fare || 0)}</b> (4.8× surge, 1 hotel, 0 homes)</li>` : ''}
             <li>🚧 There is a traffic cone in your bed</li>
+            ${m.spouse ? `<li>💍 ${m.spouse.name}, your ${m.spouse.title}, is at the end of the bed, arms crossed: <i>"Where were you?"</i></li>` : ''}
+            ${HOTEL_LINE[m.hotel] ? `<li>${HOTEL_LINE[m.hotel]}</li>` : ''}
+            ${m.paper?.length ? `<li>📰 You made the front page: <b>${m.paper[0]}</b></li>` : ''}
           </ul>
           <button type="button" class="btn gold wide h-water">💧 Drink the ${money(WATER)} water <small>(cures it)</small></button>
           <button type="button" class="btn wide h-shades">😎 Sunglasses on, back to the casino</button>

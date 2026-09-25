@@ -3,6 +3,7 @@
 
 import * as THREE from 'three';
 import { Stage3D, texFrom } from './kitchen3d.js';
+import { buildAvatar } from './avatar.js';
 
 const rand = (a, b) => a + Math.random() * (b - a);
 const smooth = (t) => (t <= 0 ? 0 : t >= 1 ? 1 : t * t * (3 - 2 * t));
@@ -58,8 +59,181 @@ function lockScreen(texts) {
   });
 }
 
+// 📰 the morning paper, headlines about your night
+function newspaper(headlines) {
+  return canvas(1024, 720, (x, w, h) => {
+    x.fillStyle = '#f3efe4';
+    x.fillRect(0, 0, w, h);
+    x.fillStyle = '#1a1a1a';
+    x.textAlign = 'center';
+    x.font = 'bold 76px "Old English Text MT", Georgia, serif';
+    x.fillText('The Daily Jackpot', w / 2, 88);
+    x.fillRect(40, 110, w - 80, 5);
+    x.font = 'italic 24px Georgia, serif';
+    x.fillText(`${new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })} · Price: one chip · "All the news that fits in a hangover"`, w / 2, 145);
+    x.fillRect(40, 160, w - 80, 2);
+    // wrap text into lines that fit
+    const wrap = (text, font, maxW) => {
+      x.font = font;
+      const words = text.split(' ');
+      const lines = [];
+      let line = '';
+      for (const wd of words) {
+        const test = line ? line + ' ' + wd : wd;
+        if (x.measureText(test).width > maxW && line) {
+          lines.push(line);
+          line = wd;
+        } else line = test;
+      }
+      lines.push(line);
+      return lines;
+    };
+    const [main, ...rest] = headlines;
+    let y = 230;
+    for (const l of wrap(main, 'bold 64px Georgia, serif', w - 100)) {
+      x.fillText(l, w / 2, y);
+      y += 70;
+    }
+    // a "photo": a very blurry casino
+    const py = y + 10;
+    const g = x.createLinearGradient(60, py, 460, py + 250);
+    g.addColorStop(0, '#6b4a3a');
+    g.addColorStop(1, '#2a1a14');
+    x.fillStyle = g;
+    x.fillRect(60, py, 400, 250);
+    x.font = '120px serif';
+    x.fillText('🎰', 260, py + 170);
+    x.fillStyle = '#1a1a1a';
+    x.font = 'italic 18px Georgia, serif';
+    x.fillText('The scene of the incident. (Photo: Dave)', 260, py + 275);
+    // the other stories down the side
+    x.textAlign = 'left';
+    let sy = py + 20;
+    for (const story of rest.slice(0, 3)) {
+      for (const l of wrap(story, 'bold 26px Georgia, serif', 470)) {
+        if (sy > h - 20) break;
+        x.fillText(l, 500, sy);
+        sy += 30;
+      }
+      sy += 18;
+    }
+  });
+}
+
+// 🏨 the upgrades, if you bought them: a painting of Dave, champagne, a hot tub, a tiger
+function hotelProps(s, tier, renderer) {
+  const rank = { motel: 0, suite: 1, hottub: 2, tiger: 3 }[tier] || 0;
+  const out = { bubbles: [], tail: null };
+  if (rank < 1) return out;
+  const gold = new THREE.MeshStandardMaterial({ color: 0xe8c35a, metalness: 1, roughness: 0.25 });
+  // a gold-framed portrait of Dave (a gift from the management, apparently)
+  const art = new THREE.Mesh(
+    new THREE.PlaneGeometry(1.6, 2),
+    new THREE.MeshStandardMaterial({
+      map: texFrom(
+        canvas(160, 200, (x, w, h) => {
+          x.fillStyle = '#3a1a2a';
+          x.fillRect(0, 0, w, h);
+          x.font = '110px serif';
+          x.textAlign = 'center';
+          x.fillText('🧔', w / 2, 125);
+          x.fillStyle = '#e8c35a';
+          x.font = 'bold 20px Georgia, serif';
+          x.fillText('DAVE', w / 2, 180);
+        }),
+        renderer
+      ),
+      roughness: 0.6,
+    })
+  );
+  art.position.set(3.7, 3.1, -8.25);
+  s.add(art);
+  const frame = new THREE.Mesh(new THREE.BoxGeometry(1.85, 2.25, 0.08), gold);
+  frame.position.set(3.7, 3.1, -8.32);
+  s.add(frame);
+  // champagne on ice, on the nightstand
+  const bucket = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.18, 0.34, 18), new THREE.MeshStandardMaterial({ color: 0xd8dde3, metalness: 1, roughness: 0.2 }));
+  bucket.position.set(2.05, 1.27, 0.95);
+  s.add(bucket);
+  const bottle = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.09, 0.55, 12), new THREE.MeshStandardMaterial({ color: 0x0f3d1e, metalness: 0.3, roughness: 0.15 }));
+  bottle.position.set(2.05, 1.5, 0.95);
+  bottle.rotation.z = 0.3;
+  s.add(bottle);
+  if (rank >= 2) {
+    // a hot tub by the window, bubbling away
+    const tub = new THREE.Mesh(new THREE.CylinderGeometry(1.3, 1.3, 0.9, 32, 1, true), new THREE.MeshStandardMaterial({ color: 0x6b4423, roughness: 0.5, side: THREE.DoubleSide }));
+    tub.position.set(2.5, 0.45, -6.6);
+    s.add(tub);
+    const rim = new THREE.Mesh(new THREE.TorusGeometry(1.3, 0.08, 8, 40), new THREE.MeshStandardMaterial({ color: 0x8a5a33, roughness: 0.4 }));
+    rim.rotation.x = Math.PI / 2;
+    rim.position.set(2.5, 0.9, -6.6);
+    s.add(rim);
+    const water = new THREE.Mesh(new THREE.CircleGeometry(1.25, 32), new THREE.MeshStandardMaterial({ color: 0x3fd0e0, roughness: 0.05, metalness: 0.2, emissive: 0x0a5a66, emissiveIntensity: 0.5 }));
+    water.rotation.x = -Math.PI / 2;
+    water.position.set(2.5, 0.8, -6.6);
+    s.add(water);
+    const bubMat = new THREE.MeshStandardMaterial({ color: 0xffffff, transparent: true, opacity: 0.7, roughness: 0.1 });
+    for (let i = 0; i < 16; i++) {
+      const b = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 6), bubMat);
+      b.userData = { a: Math.random() * 6.28, r: Math.random() * 1.1, phase: Math.random() };
+      s.add(b);
+      out.bubbles.push(b);
+    }
+  }
+  if (rank >= 3) {
+    // a chandelier…
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.8, 0.05, 8, 32), gold);
+    ring.rotation.x = Math.PI / 2;
+    ring.position.set(0, 5.2, -3);
+    s.add(ring);
+    for (let i = 0; i < 8; i++) {
+      const a = (i / 8) * Math.PI * 2;
+      const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.1, 10, 8), new THREE.MeshBasicMaterial({ color: 0xfff1c0 }));
+      bulb.position.set(Math.cos(a) * 0.8, 5.1, -3 + Math.sin(a) * 0.8);
+      s.add(bulb);
+    }
+    // …and a tiger, asleep on the carpet. nobody knows where it came from either.
+    const stripes = texFrom(
+      canvas(256, 64, (x, w, h) => {
+        x.fillStyle = '#e8801a';
+        x.fillRect(0, 0, w, h);
+        x.fillStyle = '#1a1208';
+        for (let i = 8; i < w; i += 26) x.fillRect(i, 0, 9, h);
+      }),
+      renderer
+    );
+    const fur = new THREE.MeshStandardMaterial({ map: stripes, roughness: 0.8 });
+    const tiger = new THREE.Group();
+    const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.45, 1.5, 8, 16), fur);
+    body.rotation.z = Math.PI / 2;
+    body.position.y = 0.45;
+    tiger.add(body);
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.42, 18, 14), new THREE.MeshStandardMaterial({ color: 0xe8801a, roughness: 0.8 }));
+    head.position.set(1.25, 0.5, 0.1);
+    tiger.add(head);
+    for (const z of [-0.2, 0.2]) {
+      const ear = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.18, 8), head.material);
+      ear.position.set(1.25, 0.9, 0.1 + z);
+      tiger.add(ear);
+    }
+    const muzzle = new THREE.Mesh(new THREE.SphereGeometry(0.18, 12, 10), new THREE.MeshStandardMaterial({ color: 0xfff4e0 }));
+    muzzle.position.set(1.6, 0.42, 0.1);
+    tiger.add(muzzle);
+    const tail = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.08, 1.1, 8), fur);
+    tail.position.set(-1.3, 0.35, 0);
+    tail.rotation.z = 1.2;
+    tiger.add(tail);
+    tiger.position.set(-1.2, 0, -6.3);
+    tiger.rotation.y = -0.2;
+    tiger.scale.setScalar(1.25);
+    s.add(tiger);
+    out.tail = tail;
+  }
+  return out;
+}
+
 export class HangoverScene extends Stage3D {
-  constructor(container, { texts, onBuzz }) {
+  constructor(container, { texts, onBuzz, headlines = null, hotel = 'motel', spouse = null }) {
     super(container, 52);
     this.onBuzz = onBuzz;
     const s = this.scene;
@@ -245,6 +419,27 @@ export class HangoverScene extends Stage3D {
     cone.position.set(0.9, 0.72, 1.7);
     s.add(cone);
 
+    // the morning paper, on the bed
+    if (headlines) {
+      const news = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 1.06), new THREE.MeshStandardMaterial({ map: texFrom(newspaper(headlines), this.renderer), roughness: 0.9, side: THREE.DoubleSide }));
+      news.position.set(0.55, 1.06, 3.4);
+      news.rotation.set(-0.7, 0.05, 0.04);
+      s.add(news);
+    }
+    // the upgrades you bought
+    this.props = hotelProps(s, hotel, this.renderer);
+    if (hotel !== 'motel') room.material.color.set(0xffe2b8); // warmer, fancier walls
+    // married? they're standing at the end of the bed, arms crossed
+    if (spouse) {
+      const a = buildAvatar(spouse.look);
+      a.root.position.set(-0.5, 0, -2.2);
+      a.root.updateMatrixWorld(true);
+      a.root.position.y = 0.02 - new THREE.Box3().setFromObject(a.root).min.y;
+      a.root.rotation.y = 0.15;
+      s.add(a.root);
+      this.spouse = a;
+    }
+
     this.look = new THREE.Vector3(0, 2.6, -7);
     this.camera.position.set(0.2, 1.35, 5.4);
     this.buzzT = 1.5;
@@ -271,6 +466,22 @@ export class HangoverScene extends Stage3D {
       dp.setX(i, dp.getX(i) + Math.cos(t * 0.2 + i * 0.7) * 0.001);
     }
     dp.needsUpdate = true;
+
+    // the tub bubbles, the tiger dreams, the spouse taps a foot
+    for (const b of this.props.bubbles) {
+      const u = b.userData;
+      const k = (t * 0.6 + u.phase) % 1;
+      b.position.set(2.5 + Math.cos(u.a + t * 0.3) * u.r, 0.82 + k * 0.25, -6.6 + Math.sin(u.a + t * 0.3) * u.r);
+      b.scale.setScalar(1 - k * 0.7);
+    }
+    if (this.props.tail) this.props.tail.rotation.z = 1.2 + Math.sin(t * 1.5) * 0.25;
+    if (this.spouse) {
+      const a = this.spouse;
+      a.head.rotation.set(0, Math.sin(t * 0.7) * 0.15, Math.sin(t * 2.2) * 0.05);
+      a.armL.g.rotation.set(-1.2, 0, 0.95); // arms crossed
+      a.armR.g.rotation.set(-1.2, 0, -0.95);
+      a.legs[1].rotation.x = Math.max(0, Math.sin(t * 6)) * -0.2; // tap, tap, tap
+    }
 
     // the phone buzzes. it's Dave.
     if ((this.buzzT -= dt) < 0) {
